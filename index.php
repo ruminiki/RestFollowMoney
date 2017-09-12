@@ -70,5 +70,26 @@ $app->delete('/bankAccounts/:id', function($id) use ($app){
 	(new \controllers\BankAccount($app))->delete($id);
 });
 
+//========MOVIMENTOS=====//
+$app->get('/movements/user/:user/period/:period', function($user, $period) use ($app){
+	(new \controllers\Movement($app))->list($user, $period);
+});
+ 
+$app->get('/movements/:id', function($id) use ($app){
+	(new \controllers\Movement($app))->get($id);
+});
+ 
+$app->post('/movements/', function() use ($app){
+	(new \controllers\Movement($app))->new();
+});
+ 
+$app->put('/movements/:id', function($id) use ($app){
+	(new \controllers\Movement($app))->edit($id);
+});
+ 
+$app->delete('/movements/:id', function($id) use ($app){
+	(new \controllers\Movement($app))->delete($id);
+});
+
 //Rodando aplicação
 $app->run();
