@@ -101,6 +101,9 @@ namespace controllers{
 			*/
 			$sth = $this->PDO->prepare("INSERT INTO movimento (".implode(',', $keys).") VALUES (:".implode(",:", $keys).")");
 			foreach ($dados as $key => $value) {
+				if ( is_array($value) ){
+					$value = $value['id'];
+				}
 				$sth ->bindValue(':'.$key,$value);
 			}
 			$sth->execute();
@@ -125,6 +128,10 @@ namespace controllers{
 			$sth = $this->PDO->prepare("UPDATE movimento SET ".implode(',', $sets)." WHERE id = :id");
 			$sth ->bindValue(':id',$id);
 			foreach ($dados as $key => $value) {
+				if ( is_array($value) ){
+					$value = $value['id'];
+				}
+
 				$sth ->bindValue(':'.$key,$value);
 			}
 			//Retorna status da edição
