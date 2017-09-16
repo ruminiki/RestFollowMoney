@@ -21,7 +21,7 @@ namespace controllers{
 		*/
 		public function list($user){
 			global $app;
-			$sth = $this->PDO->prepare("SELECT * FROM contaBancaria WHERE usuario = :user");
+			$sth = $this->PDO->prepare("SELECT * FROM contaBancaria WHERE usuario = :user order by descricao");
 			$sth ->bindValue(':user',$user);
 			$sth->execute();
 			$result = $sth->fetchAll(\PDO::FETCH_ASSOC);

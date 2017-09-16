@@ -13,6 +13,7 @@
 	 	public $id;
 	 	public $descricao;
 	 	public $finalidadeSuperior;
+	 	public $usuario;
 	 }
 }
 

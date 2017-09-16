@@ -27,6 +27,7 @@
 	 	public $hashParcelas;
 	 	public $hashTransferencia;
 		public $fatura;
+		public $usuario;
 	 	
 	 	/*public function cloneMovimento(){
 	 		$movimento = new MovimentoVO();

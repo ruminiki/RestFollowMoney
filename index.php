@@ -49,6 +49,12 @@ $app->delete('/creditCards/:id', function($id) use ($app){
 	(new \controllers\CreditCard($app))->delete($id);
 });
 
+//========FATURA CARTÃO CREDITO=====//
+$app->get('/creditCardInvoices/creditCard/:creditCard', function($creditCard) use ($app){
+	(new \controllers\CreditCardInvoice($app))->list($creditCard);
+});
+ 
+
 //========CONTA BANCÁRIA=====//
 $app->get('/bankAccounts/user/:user', function($user) use ($app){
 	(new \controllers\BankAccount($app))->list($user);

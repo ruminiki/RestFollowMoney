@@ -16,6 +16,7 @@
 	 	public $dataFatura;
 		public $dataFechamento;
 		public $limite;
+		public $usuario;
 		
 	 }
 }

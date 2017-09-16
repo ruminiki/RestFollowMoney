@@ -16,6 +16,7 @@ namespace controllers\domain{
 	 	public $digito;
 		public $situacao; 
 		public $dataInativacao;
+		public $usuario;
 		
 	 }
 }

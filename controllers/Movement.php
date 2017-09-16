@@ -64,13 +64,14 @@ namespace controllers{
 		*/
 		public function list($user, $period){
 			global $app;
-			$sth = $this->PDO->prepare(SQL_MOVIMENTO . " WHERE m.usuario = :user and SUBSTRING(m.vencimento, 1, 6) = :period ");
+			$sth = $this->PDO->prepare(SQL_MOVIMENTO . " WHERE m.usuario = :user and SUBSTRING(m.vencimento, 1, 6) = :period 
+				                                         order by m.vencimento, m.emissao, m.descricao");
 			$sth ->bindValue(':user',$user);
 			$sth ->bindValue(':period',$period);
 			$sth->execute();
 			$result = $sth->fetchAll(\PDO::FETCH_ASSOC);
-			$array = resultToArray($result);
-			$app->render('default.php',["data"=>$array],200); 
+			$result = $this->resultToArray($result);
+			$app->render('default.php',["data"=>$result],200); 
 		}
 		/*
 		get
@@ -158,7 +159,7 @@ namespace controllers{
 		$list = array();
 		
 		foreach ($result as $key => $value) {
-			array_push($list, rowToObject($value));
+			array_push($list, $this->rowToObject($value));
 		}
 
 		return $list;
@@ -183,7 +184,7 @@ namespace controllers{
 		$contaBancaria->descricao      = $row['descricaoContaBancaria'];
 		$contaBancaria->numero         = $row['numeroContaBancaria'];
 		$contaBancaria->digito         = $row['digitoContaBancaria'];
-		$contaBancaria->idUsuario      = $row['usuario'];
+		$contaBancaria->usuario        = $row['usuario'];
 		$movimento->contaBancaria      = $contaBancaria;
 		
 		$fornecedor                    = new \controllers\domain\FornecedorVO();
@@ -203,7 +204,7 @@ namespace controllers{
 		$formaPagamento->id            = $row['idFormaPagamento'];
 		$formaPagamento->descricao     = $row['descricaoFormaPagamento'];
 		$formaPagamento->sigla         = $row['siglaFormaPagamento'];
-		$formaPagamento->idUsuario	   = $row['usuario'];
+		$formaPagamento->usuario	   = $row['usuario'];
 		$movimento->formaPagamento     = $formaPagamento;
 		
 		$cartaoCredito                 = new \controllers\domain\CartaoCreditoVO();
@@ -212,7 +213,7 @@ namespace controllers{
 		$cartaoCredito->limite         = $row['limite'];
 		$cartaoCredito->dataFatura     = $row['dataFatura'];
 		$cartaoCredito->dataFechamento = $row['dataFechamento'];
-		$cartaoCredito->idUsuario	   = $row['usuario'];
+		$cartaoCredito->usuario  	   = $row['usuario'];
 		$movimento->cartaoCredito      = $cartaoCredito;
 		
 		$fatura                 	   = new \controllers\domain\FaturaVO();
@@ -220,7 +221,7 @@ namespace controllers{
 		$fatura->mesReferencia         = $row['mesReferencia'];
 		$fatura->valor                 = $row['valorFatura'];
 		$fatura->valorPagamento        = $row['valorPagamentoFatura'];
-		$fatura->idUsuario	           = $row['usuario'];
+		$fatura->usuario	           = $row['usuario'];
 		$movimento->fatura             = $fatura;
 
 		return $movimento;
