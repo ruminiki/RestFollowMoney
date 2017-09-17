@@ -7,7 +7,12 @@ namespace controllers{
 			f.emissao, 
 			f.vencimento, 
 			f.emissao, 
-			f.valor, 
+			coalesce(f.valor, ((select sum(valor) from movimento m 
+			                    inner join movimentosFatura mf on mf.movimento = m.id 
+			                    where m.operacao = 'DEBITO' and mf.fatura = f.id) - 
+			                    coalesce((select sum(valor) from movimento m 
+			                    inner join movimentosFatura mf on mf.movimento = m.id 
+			                    where m.operacao = 'CREDITO' and mf.fatura = f.id),0))) as valor, 
 			f.valorPagamento, 
 			f.usuario as usuario, 
 			f.mesReferencia as mesReferencia, 
@@ -51,7 +56,7 @@ namespace controllers{
 		*/
 		public function list($creditCard){
 			global $app;
-			$sth = $this->PDO->prepare(SQL_FATURA . " WHERE cartaoCredito = :creditCard order by mesReferencia");
+			$sth = $this->PDO->prepare(SQL_FATURA . " WHERE cartaoCredito = :creditCard order by vencimento desc");
 			$sth ->bindValue(':creditCard',$creditCard);
 			$sth->execute();
 			$result = $sth->fetchAll(\PDO::FETCH_ASSOC);

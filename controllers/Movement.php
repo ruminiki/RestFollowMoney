@@ -70,9 +70,22 @@ namespace controllers{
 			$sth ->bindValue(':period',$period);
 			$sth->execute();
 			$result = $sth->fetchAll(\PDO::FETCH_ASSOC);
-			$result = $this->resultToArray($result);
+			$result = resultToArray($result);
 			$app->render('default.php',["data"=>$result],200); 
 		}
+
+		public function listByInvoice($invoice){
+			global $app;
+			$sth = $this->PDO->prepare(SQL_MOVIMENTO . " inner join movimentosFatura mf on mf.movimento = m.id 
+														 where mf.fatura = :invoice
+				                                         order by m.vencimento desc, m.emissao desc, m.descricao asc");
+			$sth ->bindValue(':invoice',$invoice);
+			$sth->execute();
+			$result = $sth->fetchAll(\PDO::FETCH_ASSOC);
+			$result = resultToArray($result);
+			$app->render('default.php',["data"=>$result],200); 
+		}
+
 		/*
 		get
 		param $id
@@ -159,7 +172,7 @@ namespace controllers{
 		$list = array();
 		
 		foreach ($result as $key => $value) {
-			array_push($list, $this->rowToObject($value));
+			array_push($list, rowToObject($value));
 		}
 
 		return $list;

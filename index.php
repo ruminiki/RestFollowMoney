@@ -53,6 +53,11 @@ $app->delete('/creditCards/:id', function($id) use ($app){
 $app->get('/creditCardInvoices/creditCard/:creditCard', function($creditCard) use ($app){
 	(new \controllers\CreditCardInvoice($app))->list($creditCard);
 });
+
+//recupera os movimentos da fatura
+$app->get('/movements/invoice/:invoice', function($invoice) use ($app){
+	(new \controllers\Movement($app))->listByInvoice($invoice);
+});
  
 
 //========CONTA BANCÁRIA=====//
