@@ -54,12 +54,6 @@ $app->get('/creditCardInvoices/creditCard/:creditCard', function($creditCard) us
 	(new \controllers\CreditCardInvoice($app))->list($creditCard);
 });
 
-//recupera os movimentos da fatura
-$app->get('/movements/invoice/:invoice', function($invoice) use ($app){
-	(new \controllers\Movement($app))->listByInvoice($invoice);
-});
- 
-
 //========CONTA BANCÁRIA=====//
 $app->get('/bankAccounts/user/:user', function($user) use ($app){
 	(new \controllers\BankAccount($app))->list($user);
@@ -122,6 +116,16 @@ $app->put('/movements/:id', function($id) use ($app){
  
 $app->delete('/movements/:id', function($id) use ($app){
 	(new \controllers\Movement($app))->delete($id);
+});
+
+//recupera os movimentos da fatura
+$app->get('/movements/invoice/:invoice', function($invoice) use ($app){
+	(new \controllers\Movement($app))->listByInvoice($invoice);
+});
+
+//recupera o extrato da conta bancária
+$app->get('/movements/extract/:bankAccount/period/:period', function($bankAccount, $period) use ($app){
+	(new \controllers\Movement($app))->listByBankAccount($bankAccount, $period);
 });
 
 //Rodando aplicação

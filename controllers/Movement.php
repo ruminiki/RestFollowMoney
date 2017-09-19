@@ -86,6 +86,18 @@ namespace controllers{
 			$app->render('default.php',["data"=>$result],200); 
 		}
 
+		public function listByBankAccount($bankAccount, $period){
+			global $app;
+			$sth = $this->PDO->prepare(SQL_MOVIMENTO . " WHERE m.contaBancaria = :bankAccount and SUBSTRING(m.vencimento, 1, 6) = :period 
+				                                         order by m.vencimento, m.emissao, m.descricao");
+			$sth ->bindValue(':bankAccount',$bankAccount);
+			$sth ->bindValue(':period',$period);
+			$sth->execute();
+			$result = $sth->fetchAll(\PDO::FETCH_ASSOC);
+			$result = resultToArray($result);
+			$app->render('default.php',["data"=>$result],200); 
+		}
+
 		/*
 		get
 		param $id
