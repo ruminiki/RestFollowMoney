@@ -19,7 +19,7 @@ namespace controllers{
 		lista
 		Listand pessoas
 		*/
-		public function list($user){
+		public function listByUser($user){
 			global $app;
 			$sth = $this->PDO->prepare("SELECT * FROM contaBancaria WHERE usuario = :user order by descricao");
 			$sth ->bindValue(':user',$user);
@@ -45,7 +45,7 @@ namespace controllers{
 		nova
 		Cadastra pessoa
 		*/
-		public function new(){
+		public function _new(){
 			global $app;
 			$dados = json_decode($app->request->getBody(), true);
 			$dados = (sizeof($dados)==0)? $_POST : $dados;
