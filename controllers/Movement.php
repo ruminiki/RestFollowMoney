@@ -65,7 +65,8 @@ namespace controllers{
 		public function list($user, $period){
 			global $app;
 			$sth = $this->PDO->prepare(SQL_MOVIMENTO . " WHERE m.usuario = :user and SUBSTRING(m.vencimento, 1, 6) = :period 
-				                                         order by m.vencimento, m.emissao, m.descricao");
+				                                         and m.hashTransferencia = ''
+				                                         order by m.vencimento desc, m.emissao desc, m.descricao asc");
 			$sth ->bindValue(':user',$user);
 			$sth ->bindValue(':period',$period);
 			$sth->execute();
@@ -89,7 +90,7 @@ namespace controllers{
 		public function listByBankAccount($bankAccount, $period){
 			global $app;
 			$sth = $this->PDO->prepare(SQL_MOVIMENTO . " WHERE m.contaBancaria = :bankAccount and SUBSTRING(m.vencimento, 1, 6) = :period 
-				                                         order by m.vencimento, m.emissao, m.descricao");
+				                                         order by m.vencimento desc, m.emissao desc, m.descricao asc");
 			$sth ->bindValue(':bankAccount',$bankAccount);
 			$sth ->bindValue(':period',$period);
 			$sth->execute();
