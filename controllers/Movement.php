@@ -58,10 +58,8 @@ namespace controllers{
 			$this->PDO = new \PDO('mysql:host=localhost;dbname=fmdb', 'root', ''); //Conexão
 			$this->PDO->setAttribute( \PDO::ATTR_ERRMODE,\PDO::ERRMODE_EXCEPTION ); //habilitando erros do PDO
 		}
-		/*
-		lista
-		Listand pessoas
-		*/
+		
+		
 		public function list($user, $period){
 			global $app;
 			$sth = $this->PDO->prepare(SQL_MOVIMENTO . " WHERE m.usuario = :user and SUBSTRING(m.vencimento, 1, 6) = :period 
@@ -99,11 +97,6 @@ namespace controllers{
 			$app->render('default.php',["data"=>$result],200); 
 		}
 
-		/*
-		get
-		param $id
-		Pega pessoa pelo id
-		*/
 		public function get($id){
 			global $app;
 			$sth = $this->PDO->prepare(SQL_MOVIMENTO . " WHERE m.id = :id ");
@@ -114,10 +107,6 @@ namespace controllers{
 			$app->render('default.php',["data"=>$result],200); 
 		}
  
-		/*
-		nova
-		Cadastra pessoa
-		*/
 		public function new(){
 			global $app;
 			$dados = json_decode($app->request->getBody(), true);
@@ -138,11 +127,6 @@ namespace controllers{
 			$app->render('default.php',["data"=>['id'=>$this->PDO->lastInsertId()]],200); 
 		}
  
-		/*
-		editar
-		param $id
-		Editando pessoa
-		*/
 		public function edit($id){
 			global $app;
 			$dados = json_decode($app->request->getBody(), true);
@@ -165,91 +149,151 @@ namespace controllers{
 			$app->render('default.php',["data"=>['status'=>$sth->execute()==1]],200); 
 		}
  
-		/*
-		excluir
-		param $id
-		Excluindo pessoa
-		*/
+		
 		public function delete($id){
 			global $app;
 			$sth = $this->PDO->prepare("DELETE FROM movimento WHERE id = :id");
 			$sth ->bindValue(':id',$id);
 			$app->render('default.php',["data"=>['status'=>$sth->execute()==1]],200); 
 		}
-	}
+	
 
+		//===============SALDOS============================================================
 
-	//========
-	//===============CONVERTE RETORNO DO BANCO EM LISTA DE OBJTOS======================
-	function resultToArray($result){
-		$list = array();
-		
-		foreach ($result as $key => $value) {
-			array_push($list, rowToObject($value));
+		public function getGeneralBalance($user, $period){
+			$sql = "select valor, operacao from movimento where usuario = ':user' " .
+					" and hashTransferencia = '' and fatura is NULL and substring(vencimento, 1,6) = ':period'";
+					
+			$sth = $this->PDO->prepare($sql);
+			$sth ->bindValue(':user',$user);
+			$sth ->bindValue(':period',$period);
+			$sth->execute();
+
+			$result = $sth->fetchAll(\PDO::FETCH_ASSOC);
+			
+			$balance = 0;
+			foreach ($result as $key => $row) {
+				$row['operacao'] == 'DEBITO' ? $balance -= $row['valor'] : $balance += $row['valor'];
+			}
+
+			$app->render('default.php',["data"=>$balance],200); 
 		}
 
-		return $list;
-	}
+		public function getPreviousBalance($user, $period){
+			
+			$sql = "select operacao, valor from movimento where usuario = ':user' " .
+					" and hashTransferencia = '' and fatura is NULL and substring(vencimento, 1,6) < ':period'";
+			
+			$sth = $this->PDO->prepare($sql);
+			$sth ->bindValue(':user',$user);
+			$sth ->bindValue(':period',$period);
+			$sth->execute();
+
+			$result = $sth->fetchAll(\PDO::FETCH_ASSOC);
+			
+			$balance = 0;
+			foreach ($result as $key => $row) {
+				$row['operacao'] == 'DEBITO' ? $balance -= $row['valor'] : $balance += $row['valor'];
+			}
+
+			$app->render('default.php',["data"=>$balance)],200); 
+		}
+
 	
-	function rowToObject($row){
-		$movimento                     = new \controllers\domain\MovimentoVO();
-		$movimento->id      		   = $row['id'];
-		$movimento->descricao 	 	   = $row['descricao'];
-		$movimento->idUsuario		   = $row['usuario'];
-		$movimento->emissao            = $row['emissao']; 
-		$movimento->vencimento		   = $row['vencimento']; 
-		
-		$finalidade                    = new \controllers\domain\FinalidadeVO();
-		$finalidade->id                = $row['idFinalidade'];
-		$finalidade->descricao         = $row['descricaoFinalidade'];
-		$finalidade->idUsuario		   = $row['usuario'];
-		$movimento->finalidade		   = $finalidade;
+		public function getPreviousBalanceBankAccount($user, $bankAccount, $period){
+			
+			$sql = "select operacao, valor  from movimento where usuario = 'user' " .
+					"and substring(vencimento, 1,6) < ':period' and contaBancaria = :bankAccount";
+			
+			$sth = $this->PDO->prepare($sql);
+			$sth ->bindValue(':user',$user);
+			$sth ->bindValue(':period',$period);
+			$sth ->bindValue(':bankAccount',$bankAccount);
+			$sth->execute();
 
-		$contaBancaria                 = new \controllers\domain\ContaBancariaVO();
-		$contaBancaria->id             = $row['idContaBancaria'];
-		$contaBancaria->descricao      = $row['descricaoContaBancaria'];
-		$contaBancaria->numero         = $row['numeroContaBancaria'];
-		$contaBancaria->digito         = $row['digitoContaBancaria'];
-		$contaBancaria->usuario        = $row['usuario'];
-		$movimento->contaBancaria      = $contaBancaria;
-		
-		$fornecedor                    = new \controllers\domain\FornecedorVO();
-		$fornecedor->id                = $row['idFornecedor'];
-		$fornecedor->descricao         = $row['descricaoFornecedor'];
-		$movimento->fornecedor         = $fornecedor;
-		
-		$movimento->movimentoOrigem    = $row['movimentoOrigem'];
-		$movimento->parcela     	   = $row['parcela'];
-		$movimento->valor		  	   = $row['valor'];
-		$movimento->hashParcelas	   = $row['hashParcelas'];
-		$movimento->hashTransferencia  = $row['hashTransferencia'];
-		$movimento->status 		 	   = $row['status'];
-		$movimento->operacao	 	   = $row['operacao'];
-		
-		$formaPagamento                = new \controllers\domain\FormaPagamentoVO();
-		$formaPagamento->id            = $row['idFormaPagamento'];
-		$formaPagamento->descricao     = $row['descricaoFormaPagamento'];
-		$formaPagamento->sigla         = $row['siglaFormaPagamento'];
-		$formaPagamento->usuario	   = $row['usuario'];
-		$movimento->formaPagamento     = $formaPagamento;
-		
-		$cartaoCredito                 = new \controllers\domain\CartaoCreditoVO();
-		$cartaoCredito->id             = $row['idCartaoCredito'];
-		$cartaoCredito->descricao      = $row['descricaoCartaoCredito'];
-		$cartaoCredito->limite         = $row['limite'];
-		$cartaoCredito->dataFatura     = $row['dataFatura'];
-		$cartaoCredito->dataFechamento = $row['dataFechamento'];
-		$cartaoCredito->usuario  	   = $row['usuario'];
-		$movimento->cartaoCredito      = $cartaoCredito;
-		
-		$fatura                 	   = new \controllers\domain\FaturaVO();
-		$fatura->id                    = $row['idFatura'];
-		$fatura->mesReferencia         = $row['mesReferencia'];
-		$fatura->valor                 = $row['valorFatura'];
-		$fatura->valorPagamento        = $row['valorPagamentoFatura'];
-		$fatura->usuario	           = $row['usuario'];
-		$movimento->fatura             = $fatura;
+			$result = $sth->fetchAll(\PDO::FETCH_ASSOC);
+			
+			$balance = 0;
+			foreach ($result as $key => $row) {
+				$row['operacao'] == 'DEBITO' ? $balance -= $row['valor'] : $balance += $row['valor'];
+			}
 
-		return $movimento;
+			$app->render('default.php',["data"=>$balance)],200); 
+
+		}
+		
+		//===============CONVERTE RETORNO DO BANCO EM LISTA DE OBJTOS======================
+		function resultToArray($result){
+			$list = array();
+			
+			foreach ($result as $key => $value) {
+				array_push($list, rowToObject($value));
+			}
+
+			return $list;
+		}
+		
+		function rowToObject($row){
+			$movimento                     = new \controllers\domain\MovimentoVO();
+			$movimento->id      		   = $row['id'];
+			$movimento->descricao 	 	   = $row['descricao'];
+			$movimento->idUsuario		   = $row['usuario'];
+			$movimento->emissao            = $row['emissao']; 
+			$movimento->vencimento		   = $row['vencimento']; 
+			
+			$finalidade                    = new \controllers\domain\FinalidadeVO();
+			$finalidade->id                = $row['idFinalidade'];
+			$finalidade->descricao         = $row['descricaoFinalidade'];
+			$finalidade->idUsuario		   = $row['usuario'];
+			$movimento->finalidade		   = $finalidade;
+
+			$contaBancaria                 = new \controllers\domain\ContaBancariaVO();
+			$contaBancaria->id             = $row['idContaBancaria'];
+			$contaBancaria->descricao      = $row['descricaoContaBancaria'];
+			$contaBancaria->numero         = $row['numeroContaBancaria'];
+			$contaBancaria->digito         = $row['digitoContaBancaria'];
+			$contaBancaria->usuario        = $row['usuario'];
+			$movimento->contaBancaria      = $contaBancaria;
+			
+			$fornecedor                    = new \controllers\domain\FornecedorVO();
+			$fornecedor->id                = $row['idFornecedor'];
+			$fornecedor->descricao         = $row['descricaoFornecedor'];
+			$movimento->fornecedor         = $fornecedor;
+			
+			$movimento->movimentoOrigem    = $row['movimentoOrigem'];
+			$movimento->parcela     	   = $row['parcela'];
+			$movimento->valor		  	   = $row['valor'];
+			$movimento->hashParcelas	   = $row['hashParcelas'];
+			$movimento->hashTransferencia  = $row['hashTransferencia'];
+			$movimento->status 		 	   = $row['status'];
+			$movimento->operacao	 	   = $row['operacao'];
+			
+			$formaPagamento                = new \controllers\domain\FormaPagamentoVO();
+			$formaPagamento->id            = $row['idFormaPagamento'];
+			$formaPagamento->descricao     = $row['descricaoFormaPagamento'];
+			$formaPagamento->sigla         = $row['siglaFormaPagamento'];
+			$formaPagamento->usuario	   = $row['usuario'];
+			$movimento->formaPagamento     = $formaPagamento;
+			
+			$cartaoCredito                 = new \controllers\domain\CartaoCreditoVO();
+			$cartaoCredito->id             = $row['idCartaoCredito'];
+			$cartaoCredito->descricao      = $row['descricaoCartaoCredito'];
+			$cartaoCredito->limite         = $row['limite'];
+			$cartaoCredito->dataFatura     = $row['dataFatura'];
+			$cartaoCredito->dataFechamento = $row['dataFechamento'];
+			$cartaoCredito->usuario  	   = $row['usuario'];
+			$movimento->cartaoCredito      = $cartaoCredito;
+			
+			$fatura                 	   = new \controllers\domain\FaturaVO();
+			$fatura->id                    = $row['idFatura'];
+			$fatura->mesReferencia         = $row['mesReferencia'];
+			$fatura->valor                 = $row['valorFatura'];
+			$fatura->valorPagamento        = $row['valorPagamentoFatura'];
+			$fatura->usuario	           = $row['usuario'];
+			$movimento->fatura             = $fatura;
+
+			return $movimento;
+		}
+
 	}
 }
