@@ -12,14 +12,14 @@ namespace controllers{
 		Conectando ao banco de dados
 		*/
 		function __construct(){
-			$this->PDO = new \PDO('mysql:host=localhost;dbname=fmdb', 'root', 'dust258'); //Conexão
+			$this->PDO = new \PDO('mysql:host=localhost;dbname=fmdb', 'root', ''); //Conexão
 			$this->PDO->setAttribute( \PDO::ATTR_ERRMODE,\PDO::ERRMODE_EXCEPTION ); //habilitando erros do PDO
 		}
 		/*
 		lista
 		Listand pessoas
 		*/
-		public function listByUser($user){
+		public function list($user){
 			global $app;
 			$sth = $this->PDO->prepare("SELECT * FROM contaBancaria WHERE usuario = :user order by descricao");
 			$sth ->bindValue(':user',$user);

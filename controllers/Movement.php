@@ -69,7 +69,7 @@ namespace controllers{
 			$sth ->bindValue(':period',$period);
 			$sth->execute();
 			$result = $sth->fetchAll(\PDO::FETCH_ASSOC);
-			$result = resultToArray($result);
+			$result = $this->resultToArray($result);
 			$app->render('default.php',["data"=>$result],200); 
 		}
 
@@ -81,7 +81,7 @@ namespace controllers{
 			$sth ->bindValue(':invoice',$invoice);
 			$sth->execute();
 			$result = $sth->fetchAll(\PDO::FETCH_ASSOC);
-			$result = resultToArray($result);
+			$result = $this->resultToArray($result);
 			$app->render('default.php',["data"=>$result],200); 
 		}
 
@@ -93,7 +93,7 @@ namespace controllers{
 			$sth ->bindValue(':period',$period);
 			$sth->execute();
 			$result = $sth->fetchAll(\PDO::FETCH_ASSOC);
-			$result = resultToArray($result);
+			$result = $this->resultToArray($result);
 			$app->render('default.php',["data"=>$result],200); 
 		}
 
@@ -103,7 +103,7 @@ namespace controllers{
 			$sth ->bindValue(':id',$id);
 			$sth->execute();
 			$result = $sth->fetch(\PDO::FETCH_ASSOC);
-			$result = rowToObject($result);
+			$result = $this->rowToObject($result);
 			$app->render('default.php',["data"=>$result],200); 
 		}
  
@@ -160,10 +160,11 @@ namespace controllers{
 
 		//===============SALDOS============================================================
 
-		public function getGeneralBalance($user, $period){
-			$sql = "select valor, operacao from movimento where usuario = ':user' " .
-					" and hashTransferencia = '' and fatura is NULL and substring(vencimento, 1,6) = ':period'";
-					
+		public function getPreviousBalance($user, $period){
+			global $app;
+			$sql = "select operacao, valor from movimento where usuario = :user " .
+					" and hashTransferencia = '' and fatura is NULL and substring(vencimento, 1,6) < :period";
+			
 			$sth = $this->PDO->prepare($sql);
 			$sth ->bindValue(':user',$user);
 			$sth ->bindValue(':period',$period);
@@ -173,40 +174,18 @@ namespace controllers{
 			
 			$balance = 0;
 			foreach ($result as $key => $row) {
-				$row['operacao'] == 'DEBITO' ? $balance -= $row['valor'] : $balance += $row['valor'];
+				strtoupper($row['operacao']) == 'DEBITO' ? $balance -= $row['valor'] : $balance += $row['valor'];
 			}
 
 			$app->render('default.php',["data"=>$balance],200); 
 		}
 
-		public function getPreviousBalance($user, $period){
-			
-			$sql = "select operacao, valor from movimento where usuario = ':user' " .
-					" and hashTransferencia = '' and fatura is NULL and substring(vencimento, 1,6) < ':period'";
-			
-			$sth = $this->PDO->prepare($sql);
-			$sth ->bindValue(':user',$user);
-			$sth ->bindValue(':period',$period);
-			$sth->execute();
-
-			$result = $sth->fetchAll(\PDO::FETCH_ASSOC);
-			
-			$balance = 0;
-			foreach ($result as $key => $row) {
-				$row['operacao'] == 'DEBITO' ? $balance -= $row['valor'] : $balance += $row['valor'];
-			}
-
-			$app->render('default.php',["data"=>$balance)],200); 
-		}
-
 	
-		public function getPreviousBalanceBankAccount($user, $bankAccount, $period){
-			
-			$sql = "select operacao, valor  from movimento where usuario = 'user' " .
-					"and substring(vencimento, 1,6) < ':period' and contaBancaria = :bankAccount";
+		public function getPreviousBalanceBankAccount($bankAccount, $period){
+			global $app;
+			$sql = "select operacao, valor from movimento where substring(vencimento, 1,6) < :period and contaBancaria = :bankAccount";
 			
 			$sth = $this->PDO->prepare($sql);
-			$sth ->bindValue(':user',$user);
 			$sth ->bindValue(':period',$period);
 			$sth ->bindValue(':bankAccount',$bankAccount);
 			$sth->execute();
@@ -218,22 +197,22 @@ namespace controllers{
 				$row['operacao'] == 'DEBITO' ? $balance -= $row['valor'] : $balance += $row['valor'];
 			}
 
-			$app->render('default.php',["data"=>$balance)],200); 
+			$app->render('default.php',["data"=>$balance],200); 
 
 		}
 		
 		//===============CONVERTE RETORNO DO BANCO EM LISTA DE OBJTOS======================
-		function resultToArray($result){
+		public function resultToArray($result){
 			$list = array();
 			
 			foreach ($result as $key => $value) {
-				array_push($list, rowToObject($value));
+				array_push($list, $this->rowToObject($value));
 			}
 
 			return $list;
 		}
 		
-		function rowToObject($row){
+		public function rowToObject($row){
 			$movimento                     = new \controllers\domain\MovimentoVO();
 			$movimento->id      		   = $row['id'];
 			$movimento->descricao 	 	   = $row['descricao'];

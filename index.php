@@ -128,5 +128,16 @@ $app->get('/movements/extract/:bankAccount/period/:period', function($bankAccoun
 	(new \controllers\Movement($app))->listByBankAccount($bankAccount, $period);
 });
 
+//saldo geral
+$app->get('/movements/previousBalance/user/:user/period/:period', function($user, $period) use ($app){
+	(new \controllers\Movement($app))->getPreviousBalance($user, $period);
+});
+
+//saldo conta bancária
+$app->get('/movements/previousBalance/bankAccount/:bankAccount/period/:period', function($bankAccount, $period) use ($app){
+	(new \controllers\Movement($app))->getPreviousBalanceBankAccount($bankAccount, $period);
+});
+
+
 //Rodando aplicação
 $app->run();
