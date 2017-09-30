@@ -1,15 +1,44 @@
 <?php
 //Autoload
 $loader = require 'vendor/autoload.php';
+
+use \Psr\Http\Message\ServerRequestInterface as Request;
+use \Psr\Http\Message\ResponseInterface as Response;
+
+include_once("controllers/FinalidadeController.php");
  
+$config = [
+    'settings' => [
+        'displayErrorDetails'    => true,
+        'templates.path'         => 'templates',
+        'addContentLengthHeader' => true,
+
+        'logger' => [
+            'name' => 'slim-app',
+            'level' => Monolog\Logger::DEBUG,
+            'path' => __DIR__ . '/logs/app.log',
+        ],
+    ],
+];
+
+$app = new \Slim\App($config);
 //Instanciando objeto
-$app = new \Slim\Slim(array(
-    'templates.path' => 'templates'
-));
+//$app = new \Slim\Slim(array('templates.path' => 'templates', "settings" => $config));
 
 //=========FINALIDADE=======//
-$app->get('/finalities/user/:user', function($user) use ($app){
-	(new \controllers\Finality($app))->list($user);
+$app->get('/finalities/user/{user}', function (Request $request, Response $response) use ($app) {
+
+	$newResponse = $response->withHeader('Content-type', 'application/json')
+            ->withHeader('Access-Control-Allow-Origin', '*')
+            ->withHeader('Access-Control-Allow-Headers', 'X-Requested-With, Content-Type, Accept, Origin, Authorization')
+            ->withHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    
+    //list all finalities
+    $finalities = FinalidadeController::listByUser($request->getAttribute('user'));
+
+    //Response
+    return $newResponse->withJson($finalities, 201);
+
 });
  
 $app->get('/finalities/:id', function($id) use ($app){

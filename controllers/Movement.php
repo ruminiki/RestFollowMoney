@@ -112,6 +112,7 @@ namespace controllers{
 			$dados = json_decode($app->request->getBody(), true);
 			$dados = (sizeof($dados)==0)? $_POST : $dados;
 			$keys = array_keys($dados); //Paga as chaves do array
+
 			/*
 			O uso de prepare e bindValue é importante para se evitar SQL Injection
 			*/
@@ -123,8 +124,26 @@ namespace controllers{
 				$sth ->bindValue(':'.$key,$value);
 			}
 			$sth->execute();
-			//Retorna o id inserido
-			$app->render('default.php',["data"=>['id'=>$this->PDO->lastInsertId()]],200); 
+
+			$movement_id = $this->PDO->lastInsertId();
+
+			echo 'Movement ID: ' . $movement_id;
+
+			//se o movimento for de cartão de crédito gerenciar a fatura
+			$credit_card_fields = $dados['cartaoCredito'];
+	        if ( !empty( $credit_card_fields ) ){
+                $credit_card_id = $credit_card_fields['id'];
+
+                echo 'CREDIT CARD ID: ' . $credit_card_id;
+
+                if ( $credit_card_id > 0 ){
+                	(new \controllers\CreditCardInvoice())->addToInvoice($moviment_id, $dados['vencimento'], $credit_card_id, $dados['usuario'])
+                }
+
+            }
+
+	        //Retorna o id inserido
+			$app->render('default.php',["data"=>['id'=>$movement_id]],200); 
 		}
  
 		public function edit($id){

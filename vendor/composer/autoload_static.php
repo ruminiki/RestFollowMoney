@@ -6,10 +6,37 @@ namespace Composer\Autoload;
 
 class ComposerStaticInit2edb203ef291928d6ecda70bf4309990
 {
+    public static $files = array (
+        '253c157292f75eb38082b5acb06f3f01' => __DIR__ . '/..' . '/nikic/fast-route/src/functions.php',
+    );
+
     public static $prefixLengthsPsr4 = array (
         'c' => 
         array (
             'controllers\\' => 12,
+        ),
+        'S' => 
+        array (
+            'Slim\\PDO\\' => 9,
+            'Slim\\' => 5,
+        ),
+        'P' => 
+        array (
+            'Psr\\Log\\' => 8,
+            'Psr\\Http\\Message\\' => 17,
+            'Psr\\Container\\' => 14,
+        ),
+        'M' => 
+        array (
+            'Monolog\\' => 8,
+        ),
+        'I' => 
+        array (
+            'Interop\\Container\\' => 18,
+        ),
+        'F' => 
+        array (
+            'FastRoute\\' => 10,
         ),
     );
 
@@ -18,14 +45,46 @@ class ComposerStaticInit2edb203ef291928d6ecda70bf4309990
         array (
             0 => __DIR__ . '/../..' . '/controllers',
         ),
+        'Slim\\PDO\\' => 
+        array (
+            0 => __DIR__ . '/..' . '/slim/pdo/src/PDO',
+        ),
+        'Slim\\' => 
+        array (
+            0 => __DIR__ . '/..' . '/slim/slim/Slim',
+        ),
+        'Psr\\Log\\' => 
+        array (
+            0 => __DIR__ . '/..' . '/psr/log/Psr/Log',
+        ),
+        'Psr\\Http\\Message\\' => 
+        array (
+            0 => __DIR__ . '/..' . '/psr/http-message/src',
+        ),
+        'Psr\\Container\\' => 
+        array (
+            0 => __DIR__ . '/..' . '/psr/container/src',
+        ),
+        'Monolog\\' => 
+        array (
+            0 => __DIR__ . '/..' . '/monolog/monolog/src/Monolog',
+        ),
+        'Interop\\Container\\' => 
+        array (
+            0 => __DIR__ . '/..' . '/container-interop/container-interop/src/Interop/Container',
+        ),
+        'FastRoute\\' => 
+        array (
+            0 => __DIR__ . '/..' . '/nikic/fast-route/src',
+        ),
     );
 
     public static $prefixesPsr0 = array (
-        'S' => 
+        'P' => 
         array (
-            'Slim' => 
+            'Pimple' => 
             array (
-                0 => __DIR__ . '/..' . '/slim/slim',
+                0 => __DIR__ . '/..' . '/pimple/pimple/src',
             ),
         ),
     );
