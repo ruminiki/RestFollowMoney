@@ -27,7 +27,7 @@ $app->get('/finalities/{id}', function(Request $request, Response $response) use
 
 });
  
-$app->post('/finalities/', function(Request $request, Response $response) use ($app){
+$app->post('/finalities', function(Request $request, Response $response) use ($app){
 
     $newResponse = $response->withHeader('Content-type', 'application/json')
             ->withHeader('Access-Control-Allow-Origin', '*')
@@ -36,6 +36,7 @@ $app->post('/finalities/', function(Request $request, Response $response) use ($
 
     $value = json_decode($request->getBody());
 
+    //echo $value;
     return $newResponse->withJson(Finalitie::insert($value), 201);
 });
  

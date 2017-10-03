@@ -17,7 +17,7 @@ class Finalitie{
     }
 
     public static function insert($vo){
-        return DB::insertNew(Finalitie::TABLE_NAME, ['descricao', 'usuario'], [$vo->descricao, $vo->usuario]);
+        return DB::insert(Finalitie::TABLE_NAME, ['descricao', 'usuario'], [$vo->descricao, $vo->usuario]);
     }
 
     public static function update($vo){

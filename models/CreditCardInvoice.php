@@ -13,7 +13,7 @@ class CreditCardInvoice{
     }
 
     public static function insert($vo){
-        return DB::insertNew(CreditCardInvoice::TABLE_NAME, 
+        return DB::insert(CreditCardInvoice::TABLE_NAME, 
             ['descricao', 'emissao', 'vencimento', 'cartaoCredito', 'mesReferencia', 'usuario'], 
             [$vo->descricao, $vo->emissao, $vo->vencimento, $vo->cartaoCredito, $vo->mesReferencia, $vo->usuario]);
     }

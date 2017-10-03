@@ -17,7 +17,7 @@ class CreditCard{
     }
 
     public static function insert($vo){
-        return DB::insertNew(CreditCard::TABLE_NAME, 
+        return DB::insert(CreditCard::TABLE_NAME, 
             ['descricao', 
              'limite', 
              'dataFatura', 
