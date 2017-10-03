@@ -1,24 +1,24 @@
 <?php
 
 define("SQL_FATURA",
-        "select 
+        "SELECT 
             f.id, 
             f.emissao, 
             f.vencimento, 
-            coalesce(f.valor, ((select sum(valor) from movimento m 
-                                inner join movimentosFatura mf on mf.movimento = m.id 
-                                where m.operacao = 'DEBITO' and mf.fatura = f.id) - 
-                                coalesce((select sum(valor) from movimento m 
-                                inner join movimentosFatura mf on mf.movimento = m.id 
-                                where m.operacao = 'CREDITO' and mf.fatura = f.id),0))) as valor, 
+            coalesce(f.valor, ((SELECT sum(valor) FROM movimento m 
+                                INNER JOIN movimentosFatura mf ON mf.movimento = m.id 
+                                where m.operacao = 'DEBITO' AND mf.fatura = f.id) - 
+                                coalesce((SELECT sum(valor) FROM movimento m 
+                                INNER JOIN movimentosFatura mf ON mf.movimento = m.id 
+                                where m.operacao = 'CREDITO' AND mf.fatura = f.id),0))) as valor, 
             f.valorPagamento, 
             f.usuario as usuario, 
             f.mesReferencia as mesReferencia, 
             f.status as status, 
-            c.id as idContaBancaria, 
-            c.descricao as descricaoContaBancaria, 
-            c.numero as numeroContaBancaria, 
-            c.digito as digitoContaBancaria,
+            c.id as idCONtaBancaria, 
+            c.descricao as descricaoCONtaBancaria, 
+            c.numero as numeroCONtaBancaria, 
+            c.digito as digitoCONtaBancaria,
             cr.id as idCartaoCredito, 
             cr.descricao as descricaoCartaoCredito,
             cr.limite as limite, 
@@ -27,12 +27,86 @@ define("SQL_FATURA",
             fp.id as idFormaPagamento, 
             fp.descricao as descricaoFormaPagamento, 
             fp.sigla as siglaFormaPagamento 
-        from fatura f 
-        left join contaBancaria c on (c.id = f.contaBancaria and c.usuario = f.usuario)
-        left join formaPagamento fp on (fp.id = f.formaPagamento and fp.usuario = f.usuario)
-        inner join cartaoCredito cr on (cr.id = f.cartaoCredito and cr.usuario = f.usuario)
-        WHERE cartaoCredito = :creditCard and 
-        exists (select 1 
-                from movimentosFatura mf
+        FROM fatura f 
+        LEFT JOIN cONtaBancaria c ON (c.id = f.cONtaBancaria AND c.usuario = f.usuario)
+        LEFT JOIN formaPagamento fp ON (fp.id = f.formaPagamento AND fp.usuario = f.usuario)
+        INNER JOIN cartaoCredito cr ON (cr.id = f.cartaoCredito AND cr.usuario = f.usuario)
+        WHERE cartaoCredito = :creditCard AND 
+        exists (SELECT 1 
+                FROM movimentosFatura mf
                 where mf.fatura = f.id) 
         order by vencimento desc"); 
+
+
+define("SQL_MOVIMENTO",
+            "SELECT m.id, 
+                    m.descricao, 
+                    m.usuario, 
+                    m.emissao, 
+                    m.vencimento, 
+                    m.valor, 
+                    m.status, 
+                    m.operacao, 
+                    m.movimentoOrigem,
+                    m.parcela, 
+                    m.hashParcelas, 
+                    m.hashTransferencia, 
+                    fl.id as idFinalidade, 
+                    fl.descricao as descricaoFinalidade,
+                    c.id as idCONtaBancaria, 
+                    c.descricao as descricaoCONtaBancaria, 
+                    c.numero as numeroCONtaBancaria,
+                    c.digito as digitoCONtaBancaria, 
+                    f.id as idFornecedor, 
+                    f.descricao as descricaoFornecedor,
+                    cr.id as idCartaoCredito, 
+                    cr.descricao as descricaoCartaoCredito, 
+                    cr.limite as limite, 
+                    cr.dataFatura as dataFatura, 
+                    cr.dataFechamento as dataFechamento,
+                    ft.id as idFatura, 
+                    ft.mesReferencia as mesReferencia, 
+                    ft.valor as valorFatura, 
+                    ft.valorPagamento as valorPagamentoFatura,
+                    fp.id as idFormaPagamento, 
+                    fp.descricao as descricaoFormaPagamento, 
+                    fp.sigla as siglaFormaPagamento 
+            FROM movimento m 
+                LEFT JOIN cONtaBancaria c ON (c.id = m.cONtaBancaria AND c.usuario = m.usuario)
+                LEFT JOIN fornecedor f ON (f.id = m.fornecedor AND f.usuario = m.usuario)
+                LEFT JOIN formaPagamento fp ON (fp.id = m.formaPagamento AND fp.usuario = m.usuario)
+                LEFT JOIN cartaoCredito cr ON (cr.id = m.cartaoCredito AND cr.usuario = m.usuario)
+                LEFT JOIN fatura ft ON (ft.id = m.fatura AND ft.usuario = m.usuario)
+                INNER JOIN finalidade fl ON (fl.id = m.finalidade AND fl.usuario = m.usuario) "); 
+
+define("PREVIOUS_BALANCE", 
+            "SELECT 
+                operacao, 
+                valor 
+            FROM movimento 
+            where usuario = :user 
+            AND hashTransferencia = '' 
+            AND fatura is NULL 
+            AND substring(vencimento, 1,6) < :period");
+
+define("PREVIOUS_BALANCE_BANK_ACCOUNT",
+            "SELECT 
+                operacao, 
+                valor 
+            FROM movimento 
+            where substring(vencimento, 1,6) < :period 
+            AND cONtaBancaria = :bankAccount");
+define("INVOICE_BY_PERIOD_REFERENCE",
+            "SELECT id, 
+                status 
+            FROM fatura 
+            WHERE mesReferencia = :period 
+            AND cartaoCredito = :creditCard");
+
+define("MOVEMENT_CLOSED_INVOICE", 
+            "SELECT 
+                f.status 
+            FROM movimentosFatura mf 
+            INNER JOIN fatura f ON (f.id = mf. fatura) 
+            WHERE mf.movimento = :movement");
+

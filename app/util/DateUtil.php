@@ -31,13 +31,6 @@
  			return array('year' => substr($date,4,4), 'month' => substr($date,2,2), 'day' => substr($date,0,2));
  		}
  	}
-
- 	public static function mesReferenciaFromDateString($date){
-        //FORMATA O MES DE REFERENCIA EX: JAN/2017
-        $mes  = substr($date,4,2);
-        $year = substr($date,0,4);
-        return DateUtil::getRepresentacaoMesString($mes) . '/' . $year;
-    }
 	
 	public static function getRepresentacaoMesString($mes){
 		switch ($mes) {

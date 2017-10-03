@@ -2,13 +2,27 @@
 
 require_once("dao/DB.php");
 require_once("dao/SQLs.php");
+require_once("models/CreditCard.php");
+require_once("app/util/DateUtil.php");
 
 class CreditCardInvoice{
 
-    const TABLE_NAME='fatura';
+    const TABLE_NAME    = 'fatura';
+    const STATUS_CLOSED = 'FECHADA';
 
     public static function listByCreditCard($creditCard){
         $result = DB::executeQuery(SQL_FATURA, [':creditCard' => $creditCard]);
+        return CreditCardInvoice::resultToArray($result);
+    }
+
+    public static function findByID($id){
+        $result = DB::findByID(TABLE_NAME, [':id' => $id]);
+        return CreditCardInvoice::resultToArray($result);
+    }
+
+
+    public static function findByCrediCardPeriod($creditCard, $period){
+        $result = DB::executeQuery(INVOICE_BY_PERIOD_REFERENCE, [':creditCard' => $creditCard, ':period' => $period]);
         return CreditCardInvoice::resultToArray($result);
     }
 
@@ -19,70 +33,46 @@ class CreditCardInvoice{
     }
 
     //ao salvar um movimento pago com cartao de credito, adiciona-o na fatura atual
-    public static function addToInvoice($moviment_id, $maturity, $credit_card_id, $user){
-        global $app;
-
+    public static function addToInvoice($movement){
         echo "ADD TO INVOICE";
 
-        //CARREGA OS DADOS DO CARTAO DE CREDITO
-        $sth = $this->PDO->prepare("SELECT id, dataFatura, dataFechamento FROM cartaoCredito WHERE id = :id");
-        $sth ->bindValue(':id',$credit_card_id);
-        $sth->execute();
-        $credit_card = $sth->fetch(\PDO::FETCH_ASSOC);
+        $cc = CreditCard::findByID($movement->cartaoCredito->id);
 
-        //FORMATA O MES DE REFERENCIA PARA BUSCA DA FATURA
-        $mes  = substr($maturity,4,2);
-        $year = substr($maturity,0,4);
-        
-        $mesReferencia = DateUtil::getRepresentacaoMesString($mes) . '/' . $year;
-        
+        $mesReferencia = DateUtil:mesReferenciaFromDateString($movement->vencimento);
+
         //VERIFICA SE EXISTE FATURA PARA O MES DE REFERENCIA
-        $sth = $this->PDO->prepare("SELECT id, status FROM fatura WHERE mesReferencia = :mesReferencia AND cartaoCredito = :cartaoCredito");
-        $sth ->bindValue(':cartaoCredito', $credit_card_id);
-        $sth ->bindValue(':mesReferencia', $mesReferencia);
-        $sth->execute();
-        $invoice = $sth->fetch(\PDO::FETCH_ASSOC);
+        $invoice = CreditCardInvoice::findByCrediCardPeriod($movement->cartaoCredito->id, $mesReferencia);
         
         //SE EXISTIR FATURA, INSERE MOVIMENTO
-        if ( !empty($invoice) && $invoice['id'] > 0 ){
-            if ( $invoice['status'] == 'FECHADA' ){
-                //FATURA JÁ ESTÁ PAGA, DEVE SER REABERTA PARA ADICIONAR MOVIMENTOS
-                throw new Exception('A fatura do cartão para o período selecionado já está fechada. É necessário cancelar o pagamento para reabrir a fatura e poder fazer novos lançamentos.');
+        if ( !empty($invoice) && $invoice->id > 0 ){
+            if ( !$invoice->status == STATUS_CLOSED ){
+                $invoice_id = $invoice->id;
+                DB::insert("movimentosFatura", ['fatura', 'movimento'], [$invoice->id, $movement->id]);
             }else{
-                //INSERE MOVIMENTO NA FATURA EXISTENTE
-                $sql = "insert into movimentosFatura (fatura, movimento) values ( " . $invoice['id'] . ", $moviment_id)";
-                $sth = $this->PDO->prepare($sql);
-                $sth->execute();
+                //FATURA JÁ ESTÁ PAGA, DEVE SER REABERTA PARA ADICIONAR MOVIMENTOS
+                throw new Exception('A fatura do cartão para o período selecionado já está fechada. 
+                    É necessário cancelar o pagamento para reabrir a fatura e poder fazer novos lançamentos.');
             }
         }else{
             //CADASTRA NOVA FATURA PARA INSERIR O MOVIMENTO
-            $dataFechamento = $credit_card['dataFechamento'];
-            
-
             if ( $mes == '01' ){
-                $emissao = (intval($year) + 1) . $mes . $dataFechamento;                
+                $emissao = (intval($year) + 1) . $mes . $cc->dataFechamento;
             }else{ 
-                $emissao = $year . DateUtil::getMesProximo($mes) . $dataFechamento;             
+                $emissao = $year . DateUtil::getMesProximo($mes) . $cc->dataFechamento;
             }
 
-            //INSERE A FATURA NOVA
-            $sql = "insert into fatura ( emissao, vencimento, mesReferencia, usuario, cartaoCredito ) " .
-                    "values (" .
-                    "'" . $emissao . "'," .
-                    "'" . $maturity . "'," .
-                    "'$mesReferencia/$year'," . 
-                    "$user," . 
-                    "$credit_card_id)";
+            $invoice = new stdClass();
+            $invoice->emissao = $emissao;
+            $invoice->vencimento = $movement->vencimento;//pega o vencimento calculado pelo front end
+            $invoice->mesReferencia = $mesReferencia.'/'.$year;
+            $invoice->usuario = $movement->usuario;
+            $invoice->cartaoCredito = $movement->cartaoCredito;
 
-            $sth = $this->PDO->prepare($sql);
-            $sth->execute();
-            $invoice_id = $this->PDO->lastInsertId();
-
+            $invoice_id = CreditCardInvoice::insert($invoice);
             //INSERE O MOVIMENTO NA FATURA
-            $sql = "insert into movimentosFatura (fatura, movimento) values ( " . $invoice_id . ", $moviment_id)";
-            $sth = $this->PDO->prepare($sql);
-            $sth->execute();
-        }   
+            DB::insert("movimentosFatura", ['fatura', 'movimento'], [$invoice_id, $movement->id]);
+        }
+        return $invoice_id;
     }
 
     public static function resultToArray($result){
