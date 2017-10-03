@@ -2,39 +2,38 @@
 
 require_once("dao/DB.php");
 
-class FinalidadeController{
+class Finalitie{
 
     const TABLE_NAME='finalidade';
 
     public static function listByUser($user){
-        $result = DB::listByUser(FinalidadeController::TABLE_NAME, $user);
-        return FinalidadeController::resultToArray($result);
+        $result = DB::listByUser(Finalitie::TABLE_NAME, $user);
+        return Finalitie::resultToArray($result);
     }
 
     public static function findByID($id){
-        $result = DB::findById(FinalidadeController::TABLE_NAME, $id);
-        return FinalidadeController::rowToObject($result);
+        $result = DB::findById(Finalitie::TABLE_NAME, $id);
+        return Finalitie::rowToObject($result);
     }
 
     public static function insert($vo){
-        return DB::insertNew(FinalidadeController::TABLE_NAME, ['descricao', 'usuario'], [$vo->descricao, $vo->usuario]);
+        return DB::insertNew(Finalitie::TABLE_NAME, ['descricao', 'usuario'], [$vo->descricao, $vo->usuario]);
     }
 
     public static function update($vo){
-        return DB::update(FinalidadeController::TABLE_NAME, ['descricao' => $vo->descricao], $vo->id);
+        return DB::update(Finalitie::TABLE_NAME, ['descricao' => $vo->descricao], $vo->id);
     }
 
     public static function delete($id){
-        return DB::delete(FinalidadeController::TABLE_NAME, $id);
+        return DB::delete(Finalitie::TABLE_NAME, $id);
     }
 
     public static function resultToArray($result){
         $list = array();
     
         foreach ($result as $key => $value) {
-            array_push($list, FinalidadeController::rowToObject($value));
+            array_push($list, Finalitie::rowToObject($value));
         }
-
         return $list;
     }
         
@@ -42,6 +41,7 @@ class FinalidadeController{
         $entity            = new stdClass();
         $entity->id        = $row['id'];
         $entity->descricao = $row['descricao'];
+        $entity->usuario   = $row['usuario'];
         return $entity;
     }
 

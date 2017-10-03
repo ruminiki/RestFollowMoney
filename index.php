@@ -2,11 +2,6 @@
 //Autoload
 $loader = require 'vendor/autoload.php';
 
-use \Psr\Http\Message\ServerRequestInterface as Request;
-use \Psr\Http\Message\ResponseInterface as Response;
-
-include_once("controllers/FinalidadeController.php");
- 
 $config = [
     'settings' => [
         'displayErrorDetails'    => true,
@@ -22,67 +17,13 @@ $config = [
 ];
 
 $app = new \Slim\App($config);
-//Instanciando objeto
-//$app = new \Slim\Slim(array('templates.path' => 'templates', "settings" => $config));
 
-//=========FINALIDADE=======//
-$app->get('/finalities/user/{user}', function (Request $request, Response $response) use ($app) {
+require_once "app/routes/finalitie_routes.php";
+require_once "app/routes/credit_card_routes.php";
+require_once "app/routes/credit_card_invoice_routes.php";
 
-	$newResponse = $response->withHeader('Content-type', 'application/json')
-            ->withHeader('Access-Control-Allow-Origin', '*')
-            ->withHeader('Access-Control-Allow-Headers', 'X-Requested-With, Content-Type, Accept, Origin, Authorization')
-            ->withHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-    
-    //list all finalities
-    $finalities = FinalidadeController::listByUser($request->getAttribute('user'));
 
-    //Response
-    return $newResponse->withJson($finalities, 201);
-
-});
- 
-$app->get('/finalities/:id', function($id) use ($app){
-	(new \controllers\Finality($app))->get($id);
-});
- 
-$app->post('/finalities/', function() use ($app){
-	(new \controllers\Finality($app))->new();
-});
- 
-$app->put('/finalities/:id', function($id) use ($app){
-	(new \controllers\Finality($app))->edit($id);
-});
- 
-$app->delete('/finalities/:id', function($id) use ($app){
-	(new \controllers\Finality($app))->delete($id);
-});
- 
-//========CARTÃO DE CRÉDITO=====//
-$app->get('/creditCards/user/:user', function($user) use ($app){
-	(new \controllers\CreditCard($app))->list($user);
-});
- 
-$app->get('/creditCards/:id', function($id) use ($app){
-	(new \controllers\CreditCard($app))->get($id);
-});
- 
-$app->post('/creditCards/', function() use ($app){
-	(new \controllers\CreditCard($app))->new();
-});
- 
-$app->put('/creditCards/:id', function($id) use ($app){
-	(new \controllers\CreditCard($app))->edit($id);
-});
- 
-$app->delete('/creditCards/:id', function($id) use ($app){
-	(new \controllers\CreditCard($app))->delete($id);
-});
-
-//========FATURA CARTÃO CREDITO=====//
-$app->get('/creditCardInvoices/creditCard/:creditCard', function($creditCard) use ($app){
-	(new \controllers\CreditCardInvoice($app))->list($creditCard);
-});
-
+/*
 //========CONTA BANCÁRIA=====//
 $app->get('/bankAccounts/user/:user', function($user) use ($app){
 	(new \controllers\BankAccount($app))->list($user);
@@ -165,7 +106,7 @@ $app->get('/movements/previousBalance/user/:user/period/:period', function($user
 //saldo conta bancária
 $app->get('/movements/previousBalance/bankAccount/:bankAccount/period/:period', function($bankAccount, $period) use ($app){
 	(new \controllers\Movement($app))->getPreviousBalanceBankAccount($bankAccount, $period);
-});
+});*/
 
 
 //Rodando aplicação
