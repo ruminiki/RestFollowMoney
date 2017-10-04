@@ -10,7 +10,7 @@ class Movement{
 
     public static function listByUserPeriod($user, $period){
         $sql = SQL_MOVIMENTO . " WHERE m.usuario = :user 
-                                 and SUBSTRING(m.vencimento, 1, 6) = :period 
+                                 and SUBSTRING(m.vencimento, 1, 6) = :period
                                  and m.hashTransferencia = ''
                                  order by m.vencimento desc, m.emissao desc, m.descricao asc";
         $result = DB::executeQuery($sql, [':user' => $user, ':period' => $period]);
@@ -18,9 +18,9 @@ class Movement{
     }
 
     public static function findByID($id){
-        $sql = SQL_MOVIMENTO . " WHERE m.id = :id ";
-        $result = DB::executeQuery($sql, [':id' => $id]);
-        return Movement::resultToArray($result);
+        $sql = SQL_MOVIMENTO . " WHERE m.id = :id";
+        $result = DB::fetchUnique($sql, [':id' => $id]);
+        return Movement::rowToObject($result);
     }
 
     public function listByInvoice($invoice){
@@ -34,7 +34,7 @@ class Movement{
     public function listByBankAccountPeriod($bankAccount, $period){
         $sql = SQL_MOVIMENTO . " WHERE m.contaBancaria = :bankAccount 
                                  and SUBSTRING(m.vencimento, 1, 6) = :period 
-                                 order by m.vencimento desc, m.emissao desc, m.descricao asc"
+                                 order by m.vencimento desc, m.emissao desc, m.descricao asc";
         $result = DB::executeQuery($sql, [':bankAccount' => $bankAccount, 'period' => $period]);
         return Movement::resultToArray($result);
     }
@@ -67,7 +67,7 @@ class Movement{
         echo 'Movement ID: ' . $id;
 
         //se o movimento for de cartão de crédito gerenciar a fatura
-        if ( $vo->cartaoCredito->id > 0 ) ){
+        if ( isset($vo->cartaoCredito) && $vo->cartaoCredito->id > 0 ){
             echo 'CREDIT CARD ID: ' . $vo->cartaoCredito->id;
             CreditCardInvoice::addToInvoice($vo);
         }
@@ -80,15 +80,19 @@ class Movement{
             throw new Exception("O movimento não pode ser alterado pois se trata do pagamento de fatura de cartão de crédito. Caso deseje, cancele o pagamento da fatura para que o movimento seja removido.");
         }
 
-        if ( Movement::isInClosedInvoice($vo) ){
-            throw new Exception('O movimento selecionado está relacionado a uma fatura FECHADA. É necessário primeiro reabrir a fatura para alterar o movimento.');
-        }
-
         $old_vo = Movement::findByID($vo->id);
 
+        if ( Movement::isInClosedInvoice($vo) ){
+            //se não alterou o cartão de credito do movimento
+            if ( isset($vo->cartaoCredito) && $vo->cartaoCredito->id <= 0 
+                || ($vo->cartaoCredito->id != $old_vo->cartaoCredito->id || $vo->vencimento != $old_vo->vencimento) ){
+                    throw new Exception('O movimento selecionado está relacionado a uma fatura FECHADA. É necessário primeiro reabrir a fatura para alterar o movimento.');
+            }
+        }
+
         //se o movimento está associado a um cartão de credito
-        if ( !empty($vo->cartaoCredito) && $vo->cartaoCredito->id > 0 ){
-            if ( !empty($old_vo->cartaoCredito) && $old_vo->cartaoCredito->id > 0 ){
+        if ( isset($vo->cartaoCredito) && $vo->cartaoCredito->id > 0 ){
+            if ( isset($old_vo->cartaoCredito) && $old_vo->cartaoCredito->id > 0 ){
                 //se houve alteração do cartão de crédito ou data de vencimento - remove da fatura
                 if ( $vo->cartaoCredito->id != $old_vo->cartaoCredito->id || $vo->vencimento != $old_vo->vencimento ){
                     Movement::removeFromInvoice($fatura->id, $vo->id);
@@ -101,15 +105,18 @@ class Movement{
         return DB::update(Movement::TABLE_NAME, 
             ['descricao' => $vo->descricao,'emissao' => $vo->emissao,'vencimento' => $vo->vencimento,
              'valor' => $vo->valor,'status' => $vo->status,'operacao' => $vo->operacao,
-             'finalidade' => $vo->finalidade->id,'contaBancaria' => $vo->contaBancaria->id,'fornecedor' => $vo->fornecedor->id,
-             'cartaoCredito' => $vo->cartaoCredito->id,'formaPagamento' => $vo->formaPagamento->id], $vo->id);
+             'finalidade' => $vo->finalidade->id,
+             'contaBancaria' => isset($vo->contaBancaria) ? $vo->contaBancaria->id : null,
+             'fornecedor' => isset($vo->fornecedor) ? $vo->fornecedor->id : null,
+             'cartaoCredito' => isset($vo->cartaoCredito) ? $vo->cartaoCredito->id : null,
+             'formaPagamento' => isset($vo->formaPagamento) ? $vo->formaPagamento->id : null], $vo->id);
     }
 
     public static function delete($id){
         $old_vo = Movement::findByID($vo->id);
 
         //se o movimento está ligado a uma fatura
-        if ( !empty($old_vo->fatura) && $old_vo->fatura->id > 0 ){
+        if ( isset($old_vo->fatura) && $old_vo->fatura->id > 0 ){
             $fatura = CreditCardInvoice::findByID($old_vo->fatura->id);
             if ( $fatura->status == CreditCardInvoice::STATUS_CLOSED ){
                 throw new Exception('A fatura do cartão para o período selecionado já está fechada. 
@@ -118,7 +125,7 @@ class Movement{
                Movement::removeFromInvoice($fatura->id, $id);
             }
         }
-        return DB::delete(Movement::TABLE_NAME, );
+        return DB::delete(Movement::TABLE_NAME, $id);
     }
 
     //===========INVOICES=========================
@@ -128,9 +135,9 @@ class Movement{
     }
 
     private static function isInClosedInvoice($movement){
-        $result DB::executeQuery(MOVEMENT_CLOSED_INVOICE, [':movement' => $movement->id]);
+        $result = DB::fetchUnique(MOVEMENT_CLOSED_INVOICE, [':movement' => $movement->id]);
         //O MOVIMENTO ESTÁ ASSOCIADO A UMA FATURA FECHADA
-        if ( $result->status == CreditCardInvoice::STATUS_CLOSED ){
+        if ( isset($result) && $result['status'] == CreditCardInvoice::STATUS_CLOSED ){
             return true;
         }
         return false;
@@ -149,7 +156,7 @@ class Movement{
         $list = array();
         
         foreach ($result as $key => $value) {
-            array_push($list, $this->rowToObject($value));
+            array_push($list, Movement::rowToObject($value));
         }
 
         return $list;

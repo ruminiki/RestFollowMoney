@@ -21,7 +21,7 @@ class Finalitie{
     }
 
     public static function update($vo){
-        return DB::update(Finalitie::TABLE_NAME, ['descricao' => $vo->descricao], $vo->id);
+       return DB::update(Finalitie::TABLE_NAME, ['descricao' => $vo->descricao], $vo->id);
     }
 
     public static function delete($id){

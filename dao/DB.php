@@ -34,11 +34,17 @@
     }
 
     public static function insert($table, $arrayColumns, $arrayValues){
-      return DB::PDO()->insert($arrayColumns)->into($table)->values($arrayValues)->execute(false);
+      $stm = DB::PDO()->insert($arrayColumns)->into($table)->values($arrayValues)->execute(false);
+      return ''.$stm->lastInsertId();
     }
 
     public static function update($table, $arraySet, $id){
-      return DB::PDO()->update($arraySet)->table($table)->where('id', '=', $id)->execute();
+      try{
+        $stm = DB::PDO()->update($arraySet)->table($table)->where('id', '=', $id)->execute();
+        return ''.$stm->rowCount();
+      }catch(\PDOExeption $e){
+        return 'error';
+      }
     }
 
     public static function delete($table, $id){
@@ -48,11 +54,23 @@
     public static function executeQuery($query, $params){
       $stm = DB::PDO()->prepare($query);
       foreach ($params as $key => $value) {
-        $stm->bindParam($key,$value);
+        //echo $key . ' - ' . $value;
+        $stm->bindValue($key,$value);
       }
 
       $stm->execute();
       return $stm->fetchAll();
+    }
+
+    public static function fetchUnique($query, $params){
+      $stm = DB::PDO()->prepare($query);
+      foreach ($params as $key => $value) {
+        //echo $key . ' - ' . $value;
+        $stm->bindValue($key,$value);
+      }
+
+      $stm->execute();
+      return $stm->fetch();
     }
 
   }

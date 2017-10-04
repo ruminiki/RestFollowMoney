@@ -38,7 +38,7 @@ class CreditCardInvoice{
 
         $cc = CreditCard::findByID($movement->cartaoCredito->id);
 
-        $mesReferencia = DateUtil:mesReferenciaFromDateString($movement->vencimento);
+        $mesReferencia = DateUtil::mesReferenciaFromDateString($movement->vencimento);
 
         //VERIFICA SE EXISTE FATURA PARA O MES DE REFERENCIA
         $invoice = CreditCardInvoice::findByCrediCardPeriod($movement->cartaoCredito->id, $mesReferencia);
