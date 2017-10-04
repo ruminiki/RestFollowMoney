@@ -43,6 +43,5 @@ require_once "app/routes/credit_card_routes.php";
 require_once "app/routes/credit_card_invoice_routes.php";
 require_once "app/routes/movement_routes.php";
 
-
 //Rodando aplicação
 $app->run();

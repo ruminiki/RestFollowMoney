@@ -76,6 +76,9 @@ class Movement{
 
     public static function update($vo){
 
+        global $logger;
+        $logger->addInfo($vo);
+
         if ( Movement::isInvoicePayment($vo) ){
             throw new Exception("O movimento não pode ser alterado pois se trata do pagamento de fatura de cartão de crédito. Caso deseje, cancele o pagamento da fatura para que o movimento seja removido.");
         }

@@ -15,10 +15,10 @@ define("SQL_FATURA",
             f.usuario as usuario, 
             f.mesReferencia as mesReferencia, 
             f.status as status, 
-            c.id as idCONtaBancaria, 
-            c.descricao as descricaoCONtaBancaria, 
-            c.numero as numeroCONtaBancaria, 
-            c.digito as digitoCONtaBancaria,
+            c.id as idContaBancaria, 
+            c.descricao as descricaoContaBancaria, 
+            c.numero as numeroContaBancaria, 
+            c.digito as digitoContaBancaria,
             cr.id as idCartaoCredito, 
             cr.descricao as descricaoCartaoCredito,
             cr.limite as limite, 
@@ -28,7 +28,7 @@ define("SQL_FATURA",
             fp.descricao as descricaoFormaPagamento, 
             fp.sigla as siglaFormaPagamento 
         FROM fatura f 
-        LEFT JOIN cONtaBancaria c ON (c.id = f.cONtaBancaria AND c.usuario = f.usuario)
+        LEFT JOIN contaBancaria c ON (c.id = f.ContaBancaria AND c.usuario = f.usuario)
         LEFT JOIN formaPagamento fp ON (fp.id = f.formaPagamento AND fp.usuario = f.usuario)
         INNER JOIN cartaoCredito cr ON (cr.id = f.cartaoCredito AND cr.usuario = f.usuario)
         WHERE cartaoCredito = :creditCard AND 
@@ -72,7 +72,7 @@ define("SQL_MOVIMENTO",
                     fp.descricao as descricaoFormaPagamento, 
                     fp.sigla as siglaFormaPagamento 
             FROM movimento m 
-                LEFT JOIN cONtaBancaria c ON (c.id = m.cONtaBancaria AND c.usuario = m.usuario)
+                LEFT JOIN contaBancaria c ON (c.id = m.ContaBancaria AND c.usuario = m.usuario)
                 LEFT JOIN fornecedor f ON (f.id = m.fornecedor AND f.usuario = m.usuario)
                 LEFT JOIN formaPagamento fp ON (fp.id = m.formaPagamento AND fp.usuario = m.usuario)
                 LEFT JOIN cartaoCredito cr ON (cr.id = m.cartaoCredito AND cr.usuario = m.usuario)
@@ -95,7 +95,7 @@ define("PREVIOUS_BALANCE_BANK_ACCOUNT",
                 valor 
             FROM movimento 
             where substring(vencimento, 1,6) < :period 
-            AND cONtaBancaria = :bankAccount");
+            AND contaBancaria = :bankAccount");
 define("INVOICE_BY_PERIOD_REFERENCE",
             "SELECT id, 
                 status 

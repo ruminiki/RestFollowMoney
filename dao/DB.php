@@ -14,12 +14,15 @@
 
     const DSN = 'mysql:host=localhost;dbname=fmdb;charset=latin1';  
     const USR = 'root';
-    const PWD = '';
+    const PWD = 'dust258';
 
    private static function PDO()
       {
-          if (DB::$PDO === null)
-              DB::$PDO = new Database(DB::DSN, DB::USR, DB::PWD);
+          if (DB::$PDO === null){
+            DB::$PDO = new Database(DB::DSN, DB::USR, DB::PWD);
+            DB::$PDO->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+            DB::$PDO->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
+          }
           return DB::$PDO;
       }
 
@@ -39,12 +42,26 @@
     }
 
     public static function update($table, $arraySet, $id){
-      try{
-        $stm = DB::PDO()->update($arraySet)->table($table)->where('id', '=', $id)->execute();
-        return ''.$stm->rowCount();
-      }catch(\PDOExeption $e){
-        return 'error';
+/*
+      $sets = [];
+      foreach ($arraySet as $key => $value) {
+        $sets[] = $key." = :".$key;
       }
+ 
+      $sth = $this->PDO->prepare("UPDATE $table SET ".implode(',', $sets)." WHERE id = :id");
+      $sth ->bindValue(':id',$id);
+      foreach ($arraySet as $key => $value) {
+        $sth ->bindValue(':'.$key, $value);
+      }
+
+      $stmt = DB::PDO()->prepare($l_theQuery);
+
+      if ( $stmt ) {
+          return $stmt->execute();
+      } 
+
+      return $id;*/
+      return DB::PDO()->update($arraySet)->table($table)->where('id', '=', $id)->execute();
     }
 
     public static function delete($table, $id){
