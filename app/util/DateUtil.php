@@ -22,6 +22,23 @@
 			}
 		}
  	}
+
+ 	public static function getMonth($date){
+ 		return substr($date,4,2);
+ 	}
+
+ 	public static function getYear($date){
+ 		return substr($date,0,4);
+ 	}
+
+ 	public static function mesReferenciaFromDateString($date){
+ 		//global $logger;
+ 		//$logger->addInfo('DateUtil:mesReferenciaFromDateString: ' . substr($date,4,2));
+ 		$month = DateUtil::getRepresentacaoMesString(substr($date,4,2));
+ 		$year  = substr($date,0,4);
+ 		//$logger->addInfo('DateUtil:mesReferenciaFromDateString: ' . $month);
+ 		return $month .'/'.$year;
+ 	}
  	
  	public static function parserToArray($date, $mask){
  		if ( strtolower($mask) == "yyyymmdd" ){

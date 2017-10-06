@@ -34,20 +34,27 @@ $app->post('/movements', function(Request $request, Response $response) use ($ap
             ->withHeader('Access-Control-Allow-Headers', 'X-Requested-With, Content-Type, Accept, Origin, Authorization')
             ->withHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
 
-    $value = json_decode($request->getBody());
+    $value = json_decode($request->getBody(), false);
 
     //echo $value;
     return $newResponse->withJson(Movement::insert($value), 201);
 });
  
 $app->put('/movements/{id}', function(Request $request, Response $response) use ($app){
-    
+    global $logger;
     $newResponse = $response->withHeader('Content-type', 'application/json')
             ->withHeader('Access-Control-Allow-Origin', '*')
             ->withHeader('Access-Control-Allow-Headers', 'X-Requested-With, Content-Type, Accept, Origin, Authorization')
             ->withHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
 
-    $value = json_decode($request->getBody());
+
+    //$logger->addInfo('Update Movement: ' . $request->getBody());
+    $value = json_decode($request->getBody(), false);
+
+    //$logger->addInfo($value->descricao);
+
+    //return 'ok';
+    //return $newResponse->withJson($value, 201);
 
     return $newResponse->withJson(Movement::update($value), 201);
 

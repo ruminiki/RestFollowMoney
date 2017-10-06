@@ -34,14 +34,27 @@
     }
 
     public static function insert($table, $arrayColumns, $arrayValues){
+      global $logger;
+      $logger->addInfo('DB Insert: insert into table: ' . $table );
+      try{
+        $stm = DB::PDO()->insert($arrayColumns)->into($table)->values($arrayValues)->execute(false);
+        $logger->addInfo('DB Insert: inserted ID: ' . $stm->lastInsertId() );
+        return ''.$stm->lastInsertId();
+      }catch(\PDOExeption $e){
+        $logger->addError('DB Insert: error: ' . $e->getMessage() );
+        return 'error';
+      }
       $stm = DB::PDO()->insert($arrayColumns)->into($table)->values($arrayValues)->execute(false);
+      $logger->addInfo('DB Insert: inserted ID: ' . $stm->lastInsertId() );
       return ''.$stm->lastInsertId();
     }
 
     public static function update($table, $arraySet, $id){
+      global $logger;
       try{
-        $stm = DB::PDO()->update($arraySet)->table($table)->where('id', '=', $id)->execute();
-        return ''.$stm->rowCount();
+        $logger->addInfo('DB Update: updating $table $id: ' . print_r($arraySet) );
+        return DB::PDO()->update($arraySet)->table($table)->where('id', '=', $id)->execute();
+        //return ''.$stm->rowCount();
       }catch(\PDOExeption $e){
         return 'error';
       }

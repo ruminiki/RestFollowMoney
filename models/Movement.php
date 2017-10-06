@@ -76,31 +76,41 @@ class Movement{
 
     public static function update($vo){
 
+        global $logger;
+
         if ( Movement::isInvoicePayment($vo) ){
+            $logger->addInfo('\n Movement Update: isInvoicePayment.' );
             throw new Exception("O movimento não pode ser alterado pois se trata do pagamento de fatura de cartão de crédito. Caso deseje, cancele o pagamento da fatura para que o movimento seja removido.");
         }
 
         $old_vo = Movement::findByID($vo->id);
 
         if ( Movement::isInClosedInvoice($vo) ){
+            $logger->addInfo('Movement Update: isInClosedInvoice.' );
             //se não alterou o cartão de credito do movimento
             if ( isset($vo->cartaoCredito) && $vo->cartaoCredito->id <= 0 
                 || ($vo->cartaoCredito->id != $old_vo->cartaoCredito->id || $vo->vencimento != $old_vo->vencimento) ){
+                    $logger->addInfo('Movement Update: tentativa de alterar o cc de um movimento em fatura fechada.' );
                     throw new Exception('O movimento selecionado está relacionado a uma fatura FECHADA. É necessário primeiro reabrir a fatura para alterar o movimento.');
             }
         }
 
         //se o movimento está associado a um cartão de credito
         if ( isset($vo->cartaoCredito) && $vo->cartaoCredito->id > 0 ){
+            $logger->addInfo('Movement Update: movimento associado a um cartão de crédito.' );
             if ( isset($old_vo->cartaoCredito) && $old_vo->cartaoCredito->id > 0 ){
                 //se houve alteração do cartão de crédito ou data de vencimento - remove da fatura
                 if ( $vo->cartaoCredito->id != $old_vo->cartaoCredito->id || $vo->vencimento != $old_vo->vencimento ){
+                    $logger->addInfo('Movement Update: removendo movimento da fatura que ele estava associado.' );
                     Movement::removeFromInvoice($fatura->id, $vo->id);
                 }
             }
+            $logger->addInfo('Movement Update: adicionando movimento a nova fatura...' );
             //adiciona na nova fatura
             CreditCardInvoice::addToInvoice($vo);
         }
+
+        $logger->addInfo('Movement Update: preparando para alterar movimento...' );
 
         return DB::update(Movement::TABLE_NAME, 
             ['descricao' => $vo->descricao,'emissao' => $vo->emissao,'vencimento' => $vo->vencimento,

@@ -22,55 +22,65 @@ class CreditCardInvoice{
 
 
     public static function findByCrediCardPeriod($creditCard, $period){
-        $result = DB::executeQuery(INVOICE_BY_PERIOD_REFERENCE, [':creditCard' => $creditCard, ':period' => $period]);
-        return CreditCardInvoice::resultToArray($result);
+        $result = DB::fetchUnique(INVOICE_BY_PERIOD_REFERENCE, [':creditCard' => $creditCard, ':period' => $period]);
+        return CreditCardInvoice::rowToObject($result);
     }
 
     public static function insert($vo){
         return DB::insert(CreditCardInvoice::TABLE_NAME, 
-            ['descricao', 'emissao', 'vencimento', 'cartaoCredito', 'mesReferencia', 'usuario'], 
-            [$vo->descricao, $vo->emissao, $vo->vencimento, $vo->cartaoCredito, $vo->mesReferencia, $vo->usuario]);
+            ['emissao', 'vencimento', 'cartaoCredito', 'mesReferencia', 'usuario'], 
+            [$vo->emissao, $vo->vencimento, $vo->cartaoCredito, $vo->mesReferencia, $vo->usuario]);
     }
 
     //ao salvar um movimento pago com cartao de credito, adiciona-o na fatura atual
     public static function addToInvoice($movement){
-        echo "ADD TO INVOICE";
-
+        global $logger;
+        $logger->addInfo('CreditCardInvoice:addToInvoice: ' . $movement->descricao);
         $cc = CreditCard::findByID($movement->cartaoCredito->id);
 
+        $logger->addInfo('CreditCardInvoice:cartaoCreditoFatura: ' . $cc->descricao);
         $mesReferencia = DateUtil::mesReferenciaFromDateString($movement->vencimento);
 
+        $logger->addInfo('CreditCardInvoice:mesReferencia: ' . $mesReferencia);
         //VERIFICA SE EXISTE FATURA PARA O MES DE REFERENCIA
         $invoice = CreditCardInvoice::findByCrediCardPeriod($movement->cartaoCredito->id, $mesReferencia);
         
         //SE EXISTIR FATURA, INSERE MOVIMENTO
-        if ( !empty($invoice) && $invoice->id > 0 ){
-            if ( !$invoice->status == STATUS_CLOSED ){
+        if ( isset($invoice) && $invoice->id > 0 ){
+            $logger->addInfo('CreditCardInvoice:invoice status: ' . $invoice->status);
+            if ( !($invoice->status == CreditCardInvoice::STATUS_CLOSED) ){
+                $logger->addInfo('CreditCardInvoice:adicionando movimento a fatura...');
                 $invoice_id = $invoice->id;
                 DB::insert("movimentosFatura", ['fatura', 'movimento'], [$invoice->id, $movement->id]);
+                $logger->addInfo('CreditCardInvoice:movimento adicionado');
             }else{
+                $logger->addInfo('CreditCardInvoice:fatura paga. Não pode ser feito o lançamento de novos movimentos.');
                 //FATURA JÁ ESTÁ PAGA, DEVE SER REABERTA PARA ADICIONAR MOVIMENTOS
                 throw new Exception('A fatura do cartão para o período selecionado já está fechada. 
                     É necessário cancelar o pagamento para reabrir a fatura e poder fazer novos lançamentos.');
             }
         }else{
+            $logger->addInfo('CreditCardInvoice:invoice: não encontrada fatura para '  . $mesReferencia . ' Cadastrando nova.');
             //CADASTRA NOVA FATURA PARA INSERIR O MOVIMENTO
-            if ( $mes == '01' ){
-                $emissao = (intval($year) + 1) . $mes . $cc->dataFechamento;
+            if ( DateUtil::getMonth($movement->vencimento) == '01' ){
+                $emissao = (intval(DateUtil::getYear($movement->vencimento)) + 1) . DateUtil::getMonth($movement->vencimento) . $cc->dataFechamento;
             }else{ 
-                $emissao = $year . DateUtil::getMesProximo($mes) . $cc->dataFechamento;
+                $emissao = DateUtil::getYear($movement->vencimento) . DateUtil::getMesProximo(DateUtil::getMonth($movement->vencimento)) . $cc->dataFechamento;
             }
 
             $invoice = new stdClass();
             $invoice->emissao = $emissao;
             $invoice->vencimento = $movement->vencimento;//pega o vencimento calculado pelo front end
-            $invoice->mesReferencia = $mesReferencia.'/'.$year;
+            $invoice->mesReferencia = $mesReferencia;
             $invoice->usuario = $movement->usuario;
-            $invoice->cartaoCredito = $movement->cartaoCredito;
+            $invoice->cartaoCredito = $movement->cartaoCredito->id;
 
             $invoice_id = CreditCardInvoice::insert($invoice);
+
+            $logger->addInfo('CreditCardInvoice:nova fatura:' . $movement->cartaoCredito->descricao . ' ' . $mesReferencia);
             //INSERE O MOVIMENTO NA FATURA
             DB::insert("movimentosFatura", ['fatura', 'movimento'], [$invoice_id, $movement->id]);
+            $logger->addInfo('CreditCardInvoice:adicionado movimento $movimento->descricao a fatura $invoice_id.');
         }
         return $invoice_id;
     }
