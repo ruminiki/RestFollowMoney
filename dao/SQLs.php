@@ -1,6 +1,6 @@
 <?php
 
-define("SQL_FATURA",
+define("INVOICE_BY_CREDIT_CARD",
         "SELECT 
             f.id, 
             f.emissao, 
@@ -37,6 +37,42 @@ define("SQL_FATURA",
                 where mf.fatura = f.id) 
         order by vencimento desc"); 
 
+define("INVOICE_BY_ID",
+        "SELECT 
+            f.id, 
+            f.emissao, 
+            f.vencimento, 
+            coalesce(f.valor, ((SELECT sum(valor) FROM movimento m 
+                                INNER JOIN movimentosFatura mf ON mf.movimento = m.id 
+                                where m.operacao = 'DEBITO' AND mf.fatura = f.id) - 
+                                coalesce((SELECT sum(valor) FROM movimento m 
+                                INNER JOIN movimentosFatura mf ON mf.movimento = m.id 
+                                where m.operacao = 'CREDITO' AND mf.fatura = f.id),0))) as valor, 
+            f.valorPagamento, 
+            f.usuario as usuario, 
+            f.mesReferencia as mesReferencia, 
+            f.status as status, 
+            c.id as idContaBancaria, 
+            c.descricao as descricaoContaBancaria, 
+            c.numero as numeroContaBancaria, 
+            c.digito as digitoContaBancaria,
+            cr.id as idCartaoCredito, 
+            cr.descricao as descricaoCartaoCredito,
+            cr.limite as limite, 
+            cr.dataFatura as dataFatura, 
+            cr.dataFechamento as dataFechamento,
+            fp.id as idFormaPagamento, 
+            fp.descricao as descricaoFormaPagamento, 
+            fp.sigla as siglaFormaPagamento 
+        FROM fatura f 
+        LEFT JOIN contaBancaria c ON (c.id = f.ContaBancaria AND c.usuario = f.usuario)
+        LEFT JOIN formaPagamento fp ON (fp.id = f.formaPagamento AND fp.usuario = f.usuario)
+        INNER JOIN cartaoCredito cr ON (cr.id = f.cartaoCredito AND cr.usuario = f.usuario)
+        WHERE f.id = :id AND 
+        exists (SELECT 1 
+                FROM movimentosFatura mf
+                where mf.fatura = f.id) 
+        order by vencimento desc"); 
 
 define("SQL_MOVIMENTO",
             "SELECT m.id, 

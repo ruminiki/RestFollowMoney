@@ -70,7 +70,6 @@
     public static function executeQuery($query, $params){
       $stm = DB::PDO()->prepare($query);
       foreach ($params as $key => $value) {
-        //echo $key . ' - ' . $value;
         $stm->bindValue($key,$value);
       }
 
@@ -81,7 +80,6 @@
     public static function fetchUnique($query, $params){
       $stm = DB::PDO()->prepare($query);
       foreach ($params as $key => $value) {
-        //echo $key . ' - ' . $value;
         $stm->bindValue($key,$value);
       }
 

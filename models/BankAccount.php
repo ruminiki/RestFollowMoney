@@ -4,7 +4,9 @@ require_once("dao/DB.php");
 
 class BankAccount{
 
-    const TABLE_NAME='contaBancaria';
+    const TABLE_NAME     = 'contaBancaria';
+    const STATUS_ATIVO   = '1';
+    const STATUS_INATIVO = '0';    
 
     public static function listByUser($user){
         $result = DB::listByUser(BankAccount::TABLE_NAME, $user);
@@ -43,7 +45,8 @@ class BankAccount{
     }
 
     public static function delete($id){
-        return DB::delete(BankAccount::TABLE_NAME, $id);
+        DB::update(BankAccount::TABLE_NAME,['situacao'  => BankAccount::STATUS_INATIVO], $id);
+        return $vo;
     }
 
     public static function resultToArray($result){

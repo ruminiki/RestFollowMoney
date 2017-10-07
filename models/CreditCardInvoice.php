@@ -9,15 +9,18 @@ class CreditCardInvoice{
 
     const TABLE_NAME    = 'fatura';
     const STATUS_CLOSED = 'FECHADA';
+    const STATUS_OPEN   = 'ABERTA';
 
     public static function listByCreditCard($creditCard){
-        $result = DB::executeQuery(SQL_FATURA, [':creditCard' => $creditCard]);
+        $result = DB::executeQuery(INVOICE_BY_CREDIT_CARD, [':creditCard' => $creditCard]);
         return CreditCardInvoice::resultToArray($result);
     }
 
     public static function findByID($id){
-        $result = DB::findByID(TABLE_NAME, [':id' => $id]);
-        return CreditCardInvoice::resultToArray($result);
+        global $logger;
+        $logger->addInfo('CreditCardInvoice:findByID: ' . $id);
+        $result = DB::fetchUnique(INVOICE_BY_ID, [':id' => $id]);
+        return CreditCardInvoice::rowToObject($result);
     }
 
 
@@ -30,6 +33,42 @@ class CreditCardInvoice{
         return DB::insert(CreditCardInvoice::TABLE_NAME, 
             ['emissao', 'vencimento', 'cartaoCredito', 'mesReferencia', 'usuario'], 
             [$vo->emissao, $vo->vencimento, $vo->cartaoCredito, $vo->mesReferencia, $vo->usuario]);
+    }
+
+    public static function payInvoice($vo){
+        global $logger;
+        $logger->addInfo('CreditCardInvoice:PAYING invoice: ' . $vo->cartaoCredito->descricao . ' ' . $vo->mesReferencia);  
+        DB::PDO()->beginTransaction();
+            $vo->status = CreditCardInvoice::STATUS_CLOSED;
+            DB::update(CreditCardInvoice::TABLE_NAME, 
+                ['formaPagamento' => $vo->formaPagamento->id,
+                 'contaBancaria' => $vo->contaBancaria->id,
+                 'valorPagamento' => $vo->valorPagamento,
+                 'status' => $vo->status], $vo->id);
+
+            //@TODO
+            //generate movement payment
+
+        DB::PDO()->commit();    
+        return $vo;
+    }
+
+    public static function unpayInvoice($vo){
+        global $logger;
+        $logger->addInfo('CreditCardInvoice:UNDONE PAYment invoice: ' . $vo->cartaoCredito->descricao . ' ' . $vo->mesReferencia);        
+        DB::PDO()->beginTransaction();      
+            $vo->status = CreditCardInvoice::STATUS_OPEN;
+            DB::update(CreditCardInvoice::TABLE_NAME, 
+                ['formaPagamento' => null,
+                 'contaBancaria' => null,
+                 'valorPagamento' => null,
+                 'status' => $vo->status], $vo->id);
+
+            //@TODO
+            //delete movement payment
+
+        DB::PDO()->commit();    
+        return $vo;
     }
 
     //ao salvar um movimento pago com cartao de credito, adiciona-o na fatura atual
@@ -56,8 +95,7 @@ class CreditCardInvoice{
             }else{
                 $logger->addInfo('CreditCardInvoice:fatura paga. Não pode ser feito o lançamento de novos movimentos.');
                 //FATURA JÁ ESTÁ PAGA, DEVE SER REABERTA PARA ADICIONAR MOVIMENTOS
-                throw new Exception('A fatura do cartão para o período selecionado já está fechada. 
-                    É necessário cancelar o pagamento para reabrir a fatura e poder fazer novos lançamentos.');
+                throw new Exception('A fatura do cartão para o período selecionado já está fechada. É necessário cancelar o pagamento para reabrir a fatura e poder fazer novos lançamentos.');
             }
         }else{
             $logger->addInfo('CreditCardInvoice:invoice: não encontrada fatura para '  . $mesReferencia . ' Cadastrando nova.');

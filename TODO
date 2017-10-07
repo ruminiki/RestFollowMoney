@@ -1,13 +1,26 @@
 TODO
 
-- status movimento (pago/aberto);
+
 OK inclusão de movimento em fatura;
 OK alteração de movimento de fatura;
+OK retornar mensagens de exceção para interface;
+
 - pagamento de fatura;
 - estorno pagamento fatura;
-- retornar mensagens de exceção para interface;
+- show pagamento da fatura na conta bancária;
+
+- status movimento (pago/aberto);
+
+- na tela inicial listar as faturas do mês de todos os cartões;
+
 - ao detalhar e alterar/remover movimento de fatura ou extrato, retornar para listagem;
 - setar a data de vencimento se selecionado o cartao de credito;
 - transferência entre contas;
 - cor em finalidade;
-- adição de movimento sem descrição (+agilidade)
+- criar arquivo com mensagens de erro;
+- adição de movimento sem descrição (+agilidade);
+
+- ativar inativar finalidades;
+- revisar as constraints
+alter table movimento add constraint fk_conta_bancaria FOREIGN KEY (contaBancaria) REFERENCES contaBancaria(id);
+alter table movimento add constraint fk_conta_bancaria FOREIGN KEY (contaBancaria) REFERENCES contaBancaria(id);
