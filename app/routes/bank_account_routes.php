@@ -34,9 +34,8 @@ $app->post('/bankAccounts', function(Request $request, Response $response) use (
             ->withHeader('Access-Control-Allow-Headers', 'X-Requested-With, Content-Type, Accept, Origin, Authorization')
             ->withHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
 
-    $value = json_decode($request->getBody());
+    $value = json_decode($request->getBody(), false);
 
-    //echo $value;
     return $newResponse->withJson(BankAccount::insert($value), 201);
 });
  
@@ -47,7 +46,7 @@ $app->put('/bankAccounts/{id}', function(Request $request, Response $response) u
             ->withHeader('Access-Control-Allow-Headers', 'X-Requested-With, Content-Type, Accept, Origin, Authorization')
             ->withHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
 
-    $value = json_decode($request->getBody());
+    $value = json_decode($request->getBody(), false);
 
     return $newResponse->withJson(BankAccount::update($value), 201);
 

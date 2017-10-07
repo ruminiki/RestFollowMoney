@@ -17,7 +17,7 @@ class BankAccount{
     }
 
     public static function insert($vo){
-        return DB::insert(BankAccount::TABLE_NAME, 
+        $id = DB::insert(BankAccount::TABLE_NAME, 
             ['descricao', 
              'numero', 
              'digito', 
@@ -28,15 +28,18 @@ class BankAccount{
              $vo->digito, 
              $vo->situacao, 
              $vo->usuario]);
+        $vo->id = $id;
+        return $vo;
     }
 
     public static function update($vo){
-        return DB::update(BankAccount::TABLE_NAME, 
+        DB::update(BankAccount::TABLE_NAME, 
             ['descricao' => $vo->descricao,
              'numero'    => $vo->numero,
              'digito'    => $vo->digito,
-             'situacao'  => $vp->situacao], 
+             'situacao'  => $vo->situacao], 
             $vo->id);
+        return $vo;
     }
 
     public static function delete($id){

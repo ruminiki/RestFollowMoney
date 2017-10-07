@@ -47,14 +47,7 @@ $app->put('/movements/{id}', function(Request $request, Response $response) use 
             ->withHeader('Access-Control-Allow-Headers', 'X-Requested-With, Content-Type, Accept, Origin, Authorization')
             ->withHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
 
-
-    //$logger->addInfo('Update Movement: ' . $request->getBody());
     $value = json_decode($request->getBody(), false);
-
-    //$logger->addInfo($value->descricao);
-
-    //return 'ok';
-    //return $newResponse->withJson($value, 201);
 
     return $newResponse->withJson(Movement::update($value), 201);
 

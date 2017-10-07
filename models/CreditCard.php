@@ -17,7 +17,7 @@ class CreditCard{
     }
 
     public static function insert($vo){
-        return DB::insert(CreditCard::TABLE_NAME, 
+        $id = DB::insert(CreditCard::TABLE_NAME, 
             ['descricao', 
              'limite', 
              'dataFatura', 
@@ -28,15 +28,18 @@ class CreditCard{
              $vo->dataFatura, 
              $vo->dataFechamento, 
              $vo->usuario]);
+        $vo->id = $id;
+        return $vo;
     }
 
     public static function update($vo){
-        return DB::update(CreditCard::TABLE_NAME, 
+        DB::update(CreditCard::TABLE_NAME, 
             ['descricao'      => $vo->descricao,
              'limite'         => $vo->limite,
              'dataFatura'     => $vo->dataFatura,
-             'dataFechamento' => $vp->dataFechamento], 
+             'dataFechamento' => $vo->dataFechamento], 
             $vo->id);
+        return $vo;
     }
 
     public static function delete($id){

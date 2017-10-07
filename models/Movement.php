@@ -64,14 +64,15 @@ class Movement{
              [$vo->descricao,$vo->emissao,$vo->vencimento,$vo->valor,$vo->status,$vo->operacao,$vo->finalidade->id,
               $vo->contaBancaria->id,$vo->fornecedor->id,$vo->cartaoCredito->id,$vo->formaPagamento->id,$vo->usuario]);
 
-        echo 'Movement ID: ' . $id;
+        $vo->id = $id;
 
         //se o movimento for de cartão de crédito gerenciar a fatura
         if ( isset($vo->cartaoCredito) && $vo->cartaoCredito->id > 0 ){
             echo 'CREDIT CARD ID: ' . $vo->cartaoCredito->id;
             CreditCardInvoice::addToInvoice($vo);
         }
-        return $id;
+        
+        return $vo;
     }
 
     public static function update($vo){
@@ -83,36 +84,45 @@ class Movement{
             throw new Exception("O movimento não pode ser alterado pois se trata do pagamento de fatura de cartão de crédito. Caso deseje, cancele o pagamento da fatura para que o movimento seja removido.");
         }
 
+        if ( !empty($vo->hashTransferencia) ){
+            $logger->addInfo('\n Movement:update: movimento é uma transfência bancária.' );
+            throw new Exception("O movimento é uma transferência bancária e não pode ser alterado. Estorne a transfência e relance novamente.");
+        }
+
         $old_vo = Movement::findByID($vo->id);
 
         if ( Movement::isInClosedInvoice($vo) ){
             $logger->addInfo('Movement Update: isInClosedInvoice.' );
-            //se não alterou o cartão de credito do movimento
+            //se não alterou/removeu o cartão de credito, nem data de vencimento e operacao não tem problema
             if ( isset($vo->cartaoCredito) && $vo->cartaoCredito->id <= 0 
-                || ($vo->cartaoCredito->id != $old_vo->cartaoCredito->id || $vo->vencimento != $old_vo->vencimento) ){
-                    $logger->addInfo('Movement Update: tentativa de alterar o cc de um movimento em fatura fechada.' );
+                    || ($vo->cartaoCredito->id != $old_vo->cartaoCredito->id || $vo->vencimento != $old_vo->vencimento || $vo->operacao != $old_$vo->operacao) ){
+                    $logger->addInfo('Movement Update: tentativa de alterar o cc/vencimento/operacao de um movimento em fatura fechada.' );
                     throw new Exception('O movimento selecionado está relacionado a uma fatura FECHADA. É necessário primeiro reabrir a fatura para alterar o movimento.');
             }
-        }
+        }else{
 
-        //se o movimento está associado a um cartão de credito
-        if ( isset($vo->cartaoCredito) && $vo->cartaoCredito->id > 0 ){
-            $logger->addInfo('Movement Update: movimento associado a um cartão de crédito.' );
-            if ( isset($old_vo->cartaoCredito) && $old_vo->cartaoCredito->id > 0 ){
-                //se houve alteração do cartão de crédito ou data de vencimento - remove da fatura
-                if ( $vo->cartaoCredito->id != $old_vo->cartaoCredito->id || $vo->vencimento != $old_vo->vencimento ){
-                    $logger->addInfo('Movement Update: removendo movimento da fatura que ele estava associado.' );
-                    Movement::removeFromInvoice($fatura->id, $vo->id);
+            //se o movimento está associado a um cartão de credito
+            if ( isset($vo->cartaoCredito) && $vo->cartaoCredito->id > 0 ){
+                $logger->addInfo('Movement Update: movimento associado a um cartão de crédito.' );
+                if ( isset($old_vo->cartaoCredito) && $old_vo->cartaoCredito->id > 0 ){
+                    //se houve alteração do cartão de crédito ou data de vencimento - remove da fatura
+                    if ( $vo->cartaoCredito->id != $old_vo->cartaoCredito->id || $vo->vencimento != $old_vo->vencimento ){
+                        $logger->addInfo('Movement Update: removendo movimento da fatura que ele estava associado.' );
+                        Movement::removeFromInvoice($fatura->id, $vo->id);
+                        CreditCardInvoice::addToInvoice($vo);
+                    }
+                }else{
+                    //adiciona na nova fatura
+                    CreditCardInvoice::addToInvoice($vo);
                 }
-            }
-            $logger->addInfo('Movement Update: adicionando movimento a nova fatura...' );
-            //adiciona na nova fatura
-            CreditCardInvoice::addToInvoice($vo);
-        }
 
+            }
+
+        }
+        
         $logger->addInfo('Movement Update: preparando para alterar movimento...' );
 
-        return DB::update(Movement::TABLE_NAME, 
+        DB::update(Movement::TABLE_NAME, 
             ['descricao' => $vo->descricao,'emissao' => $vo->emissao,'vencimento' => $vo->vencimento,
              'valor' => $vo->valor,'status' => $vo->status,'operacao' => $vo->operacao,
              'finalidade' => $vo->finalidade->id,
@@ -120,19 +130,33 @@ class Movement{
              'fornecedor' => isset($vo->fornecedor) ? $vo->fornecedor->id : null,
              'cartaoCredito' => isset($vo->cartaoCredito) ? $vo->cartaoCredito->id : null,
              'formaPagamento' => isset($vo->formaPagamento) ? $vo->formaPagamento->id : null], $vo->id);
+
+        return $vo;
     }
 
     public static function delete($id){
-        $old_vo = Movement::findByID($vo->id);
+        global $logger;
+        $vo = Movement::findByID($id);
+
+        if ( Movement::isInvoicePayment($vo) ){
+            $logger->addInfo('Movement:delete: isInvoicePayment.' );
+            throw new Exception("O movimento não pode ser removido pois se trata do pagamento de fatura de cartão de crédito. Caso deseje, cancele o pagamento da fatura para que o movimento seja removido.");
+        }
+
+        if ( !empty($vo->hashTransferencia) ){
+            $logger->addInfo('Movement:delete: movimento é uma transfência bancária.' );
+            throw new Exception("O movimento é uma transferência bancária e não pode ser removido. Utilize a função de estorno.");
+        }
 
         //se o movimento está ligado a uma fatura
-        if ( isset($old_vo->fatura) && $old_vo->fatura->id > 0 ){
-            $fatura = CreditCardInvoice::findByID($old_vo->fatura->id);
-            if ( $fatura->status == CreditCardInvoice::STATUS_CLOSED ){
-                throw new Exception('A fatura do cartão para o período selecionado já está fechada. 
-                É necessário cancelar o pagamento para reabrir a fatura e poder fazer novos lançamentos.');                      
+        $invoice = Movement::isInInvoice($vo);
+        if ( isset($invoice) && $invoice->id > 0 ){
+            $logger->addInfo('Movement:delete: movimento está em uma fatura.' );
+            if ( $invoice->status == CreditCardInvoice::STATUS_CLOSED ){
+                throw new Exception('O movimento pertenece a uma fatura fechada. É necessário cancelar o pagamento da fatura para poder remover o lançamento.');                      
             }else{
-               Movement::removeFromInvoice($fatura->id, $id);
+                $logger->addInfo('Movement:delete: removendo movimento da fatura.' );
+                Movement::removeFromInvoice($invoice->id, $id);
             }
         }
         return DB::delete(Movement::TABLE_NAME, $id);
@@ -151,6 +175,11 @@ class Movement{
             return true;
         }
         return false;
+    }
+
+    private static function isInInvoice($movement){
+        $result = DB::fetchUnique(MOVEMENT_IN_INVOICE, [':movement' => $movement->id]);
+        return CreditCardInvoice::rowToObject($result);
     }
 
     private static function isInvoicePayment($movement){

@@ -9,12 +9,7 @@ require_once "app/handlers/Error.php";
 
 $config = [
     'settings' => [
-        'determineRouteBeforeAppMiddleware' => true, //VERY IMPORTANT for route logging
-        'displayErrorDetails'    => true,
-        'debug'                  => true,
         'templates.path'         => 'templates',
-        'addContentLengthHeader' => true,
-  
         'logger' => [
             'log.enabled' => true,
             'name' => 'slim-app',
@@ -33,8 +28,8 @@ use Monolog\Handler\FirePHPHandler;
 // Create the logger
 $logger = new Logger('my_logger');
 // Now add some handlers
-$logger->pushHandler(new StreamHandler(__DIR__.'/logs/app.log', Logger::DEBUG));
-$logger->pushHandler(new FirePHPHandler());
+/*$logger->pushHandler(new StreamHandler(__DIR__.'/logs/app.log', Logger::DEBUG));
+$logger->pushHandler(new FirePHPHandler());*/
 
 require_once "app/routes/finalitie_routes.php";
 require_once "app/routes/bank_account_routes.php";
@@ -42,7 +37,6 @@ require_once "app/routes/payment_form_routes.php";
 require_once "app/routes/credit_card_routes.php";
 require_once "app/routes/credit_card_invoice_routes.php";
 require_once "app/routes/movement_routes.php";
-
 
 //Rodando aplicação
 $app->run();

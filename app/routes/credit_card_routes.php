@@ -34,7 +34,7 @@ $app->post('/creditCards/', function(Request $request, Response $response) use (
             ->withHeader('Access-Control-Allow-Headers', 'X-Requested-With, Content-Type, Accept, Origin, Authorization')
             ->withHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
 
-    $value = json_decode($request->getBody());
+    $value = json_decode($request->getBody(), false);
 
     return $newResponse->withJson(CreditCard::insert($value), 201);
 });
@@ -46,7 +46,7 @@ $app->put('/creditCards/{id}', function(Request $request, Response $response) us
             ->withHeader('Access-Control-Allow-Headers', 'X-Requested-With, Content-Type, Accept, Origin, Authorization')
             ->withHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
 
-    $value = json_decode($request->getBody());
+    $value = json_decode($request->getBody(), false);
 
     return $newResponse->withJson(CreditCard::update($value), 201);
 

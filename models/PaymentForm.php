@@ -17,11 +17,14 @@ class PaymentForm{
     }
 
     public static function insert($vo){
-        return DB::insert(PaymentForm::TABLE_NAME, ['descricao', 'usuario'], [$vo->descricao, $vo->usuario]);
+        $id = DB::insert(PaymentForm::TABLE_NAME, ['descricao', 'usuario'], [$vo->descricao, $vo->usuario]);
+        $vo->id = $id;
+        return $vo;
     }
 
     public static function update($vo){
-        return DB::update(PaymentForm::TABLE_NAME, ['descricao' => $vo->descricao], $vo->id);
+        DB::update(PaymentForm::TABLE_NAME, ['descricao' => $vo->descricao], $vo->id);
+        return $vo;
     }
 
     public static function delete($id){

@@ -16,10 +16,13 @@
     const USR = 'root';
     const PWD = '';
 
-   private static function PDO()
+   public static function PDO()
       {
-          if (DB::$PDO === null)
-              DB::$PDO = new Database(DB::DSN, DB::USR, DB::PWD);
+          if (DB::$PDO === null){
+            DB::$PDO = new Database(DB::DSN, DB::USR, DB::PWD);
+            DB::$PDO->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+            DB::$PDO->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
+          }
           return DB::$PDO;
       }
 
@@ -37,31 +40,31 @@
       global $logger;
       $logger->addInfo('DB Insert: insert into table: ' . $table );
       try{
-        $stm = DB::PDO()->insert($arrayColumns)->into($table)->values($arrayValues)->execute(false);
-        $logger->addInfo('DB Insert: inserted ID: ' . $stm->lastInsertId() );
-        return ''.$stm->lastInsertId();
+        DB::PDO()->insert($arrayColumns)->into($table)->values($arrayValues)->execute(false);
+        $logger->addInfo('DB Insert: inserted ID: ' . DB::PDO()->lastInsertId() );
+        return DB::PDO()->lastInsertId();
       }catch(\PDOExeption $e){
         $logger->addError('DB Insert: error: ' . $e->getMessage() );
         return 'error';
       }
-      $stm = DB::PDO()->insert($arrayColumns)->into($table)->values($arrayValues)->execute(false);
-      $logger->addInfo('DB Insert: inserted ID: ' . $stm->lastInsertId() );
-      return ''.$stm->lastInsertId();
     }
 
     public static function update($table, $arraySet, $id){
       global $logger;
       try{
-        $logger->addInfo('DB Update: updating $table $id: ' . print_r($arraySet) );
+        $logger->addInfo('DB Update: updating ' . $table . ' ' . $id );
         return DB::PDO()->update($arraySet)->table($table)->where('id', '=', $id)->execute();
-        //return ''.$stm->rowCount();
       }catch(\PDOExeption $e){
+        $logger->addError('DB Update: error: ' . $e->getMessage() );
         return 'error';
       }
     }
 
     public static function delete($table, $id){
-      return DB::PDO()->delete()->from($table)->where('id', '=', $id);
+      global $logger;
+      $logger->addInfo('DB Delete: deleting ' . $table . ' ' . $id );
+      $stm = DB::PDO()->delete()->from($table)->where('id', '=', $id);
+      return $stm->execute();
     }
 
     public static function executeQuery($query, $params){

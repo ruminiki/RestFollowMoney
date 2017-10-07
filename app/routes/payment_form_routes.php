@@ -34,7 +34,7 @@ $app->post('/paymentForms', function(Request $request, Response $response) use (
             ->withHeader('Access-Control-Allow-Headers', 'X-Requested-With, Content-Type, Accept, Origin, Authorization')
             ->withHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
 
-    $value = json_decode($request->getBody());
+    $value = json_decode($request->getBody(), false);
 
     //echo $value;
     return $newResponse->withJson(PaymentForm::insert($value), 201);
@@ -47,7 +47,7 @@ $app->put('/paymentForms/{id}', function(Request $request, Response $response) u
             ->withHeader('Access-Control-Allow-Headers', 'X-Requested-With, Content-Type, Accept, Origin, Authorization')
             ->withHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
 
-    $value = json_decode($request->getBody());
+    $value = json_decode($request->getBody(), false);
 
     return $newResponse->withJson(PaymentForm::update($value), 201);
 
