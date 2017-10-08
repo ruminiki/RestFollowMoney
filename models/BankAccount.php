@@ -49,6 +49,31 @@ class BankAccount{
         return $vo;
     }
 
+    //================
+
+    public static function tranfer($movimento, $usuario){
+        $sql = "delete from movimento where hashTransferencia = '$movimento->hashTransferencia' and usuario = '$movimento->idUsuario'";
+        try{
+            Database::remove($sql);
+            return $movimento;  
+        }catch(Exception $e){
+            throw new Exception('N�o � possivel remover o movimento selecionado.');
+        }
+    }
+
+
+    public static function removeTransfer($movimento, $usuario){
+        $sql = "delete from movimento where hashTransferencia = '$movimento->hashTransferencia' and usuario = '$movimento->idUsuario'";
+        try{
+            Database::remove($sql);
+            return $movimento;  
+        }catch(Exception $e){
+            throw new Exception('N�o � possivel remover o movimento selecionado.');
+        }
+    }
+
+    //=======================
+
     public static function resultToArray($result){
         $list = array();
     

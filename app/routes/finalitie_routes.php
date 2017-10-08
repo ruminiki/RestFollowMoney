@@ -16,6 +16,18 @@ $app->get('/finalities/user/{user}', function (Request $request, Response $respo
 
 });
 
+$app->get('/finalities/user/{user}/fill/{letters}', function (Request $request, Response $response) use ($app){
+
+    $newResponse = $response->withHeader('Content-type', 'application/json')
+            ->withHeader('Access-Control-Allow-Origin', '*')
+            ->withHeader('Access-Control-Allow-Headers', 'X-Requested-With, Content-Type, Accept, Origin, Authorization')
+            ->withHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    
+    return $newResponse->withJson(Finalitie::listByUserAndLetters($request->getAttribute('user'), $request->getAttribute('letters')), 201);
+
+});
+
+
 $app->get('/finalities/{id}', function(Request $request, Response $response) use ($app){
 
     $newResponse = $response->withHeader('Content-type', 'application/json')

@@ -11,6 +11,14 @@ class Finalitie{
         return Finalitie::resultToArray($result);
     }
 
+    public static function listByUserAndLetters($user, $letters){
+        global $logger;
+        $logger->addInfo('Finalitie:fill by letters: ' . $letters);
+        $sql = "select id, descricao, usuario from finalidade where usuario = $user and descricao RLIKE '^[$letters]' order by descricao";
+        $result = DB::executeQuery($sql, []);
+        return Finalitie::resultToArray($result);
+    }
+
     public static function findByID($id){
         $result = DB::findById(Finalitie::TABLE_NAME, $id);
         return Finalitie::rowToObject($result);

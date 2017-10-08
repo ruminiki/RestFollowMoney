@@ -56,7 +56,7 @@ $c['errorHandler'] = function ($c) {
     	global $logger;
     	$logger->addWarning($exception->getMessage());
     	$logger->addInfo('Rollback transaction...');
-    	DB::PDO()->rollback();
+    	DB::rollback();
 
 	    $newResponse = $response->withHeader('Content-type', 'application/json')
         ->withHeader('Content-Type', 'charset=unicode')

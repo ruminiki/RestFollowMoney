@@ -12,6 +12,7 @@ class Movement{
         $sql = SQL_MOVIMENTO . " WHERE m.usuario = :user 
                                  and SUBSTRING(m.vencimento, 1, 6) = :period
                                  and m.hashTransferencia = ''
+                                 and m.fatura is null
                                  order by m.vencimento desc, m.emissao desc, m.descricao asc";
         $result = DB::executeQuery($sql, [':user' => $user, ':period' => $period]);
         return Movement::resultToArray($result);
@@ -60,9 +61,9 @@ class Movement{
     public static function insert($vo){
         $id = DB::insert(Movement::TABLE_NAME, 
             ['descricao','emissao','vencimento','valor','status','operacao','finalidade',
-             'contaBancaria','fornecedor','cartaoCredito','formaPagamento','usuario'], 
+             'contaBancaria','fornecedor','cartaoCredito','formaPagamento','fatura','usuario'], 
              [$vo->descricao,$vo->emissao,$vo->vencimento,$vo->valor,$vo->status,$vo->operacao,$vo->finalidade->id,
-              $vo->contaBancaria->id,$vo->fornecedor->id,$vo->cartaoCredito->id,$vo->formaPagamento->id,$vo->usuario]);
+              $vo->contaBancaria->id,$vo->fornecedor->id,$vo->cartaoCredito->id,$vo->formaPagamento->id,$vo->fatura->id,$vo->usuario]);
 
         $vo->id = $id;
 
@@ -77,61 +78,64 @@ class Movement{
 
     public static function update($vo){
         DB::PDO()->beginTransaction();
-            global $logger;
 
-            if ( Movement::isInvoicePayment($vo) ){
-                $logger->addInfo('\n Movement Update: isInvoicePayment.' );
-                throw new Exception("O movimento não pode ser alterado pois se trata do pagamento de fatura de cartão de crédito. Caso deseje, cancele o pagamento da fatura para que o movimento seja removido.");
+        global $logger;
+
+        if ( Movement::isInvoicePayment($vo) ){
+            $logger->addInfo('\n Movement Update: isInvoicePayment.' );
+            throw new Exception("O movimento não pode ser alterado pois se trata do pagamento de fatura de cartão de crédito. Caso deseje, cancele o pagamento da fatura para que o movimento seja removido.");
+        }
+
+        if ( !empty($vo->hashTransferencia) ){
+            $logger->addInfo('\n Movement:update: movimento é uma transfência bancária.' );
+            throw new Exception("O movimento é uma transferência bancária e não pode ser alterado. Estorne a transfência e relance novamente.");
+        }
+
+        $old_vo = Movement::findByID($vo->id);
+
+        if ( Movement::isInClosedInvoice($vo) ){
+            $logger->addInfo('Movement Update: isInClosedInvoice.' );
+            //se não alterou/removeu o cartão de credito, nem data de vencimento e operacao não tem problema
+            if ( isset($vo->cartaoCredito) && $vo->cartaoCredito->id <= 0 
+                    || ($vo->cartaoCredito->id != $old_vo->cartaoCredito->id 
+                        || $vo->vencimento != $old_vo->vencimento 
+                            || $vo->operacao != $old_vo->operacao
+                                || $vo->valor != $old_vo->valor) ){
+                    $logger->addInfo('Movement Update: tentativa de alterar o cc/vencimento/operacao de um movimento em fatura fechada.' );
+                    throw new Exception('O movimento selecionado está relacionado a uma fatura FECHADA. É necessário primeiro reabrir a fatura para alterar o movimento.');
             }
+        }else{
 
-            if ( !empty($vo->hashTransferencia) ){
-                $logger->addInfo('\n Movement:update: movimento é uma transfência bancária.' );
-                throw new Exception("O movimento é uma transferência bancária e não pode ser alterado. Estorne a transfência e relance novamente.");
-            }
-
-            $old_vo = Movement::findByID($vo->id);
-
-            if ( Movement::isInClosedInvoice($vo) ){
-                $logger->addInfo('Movement Update: isInClosedInvoice.' );
-                //se não alterou/removeu o cartão de credito, nem data de vencimento e operacao não tem problema
-                if ( isset($vo->cartaoCredito) && $vo->cartaoCredito->id <= 0 
-                        || ($vo->cartaoCredito->id != $old_vo->cartaoCredito->id 
-                            || $vo->vencimento != $old_vo->vencimento 
-                                || $vo->operacao != $old_vo->operacao) ){
-                        $logger->addInfo('Movement Update: tentativa de alterar o cc/vencimento/operacao de um movimento em fatura fechada.' );
-                        throw new Exception('O movimento selecionado está relacionado a uma fatura FECHADA. É necessário primeiro reabrir a fatura para alterar o movimento.');
-                }
-            }else{
-
-                //se o movimento está associado a um cartão de credito
-                if ( isset($vo->cartaoCredito) && $vo->cartaoCredito->id > 0 ){
-                    $logger->addInfo('Movement Update: movimento associado a um cartão de crédito.' );
-                    if ( isset($old_vo->cartaoCredito) && $old_vo->cartaoCredito->id > 0 ){
-                        //se houve alteração do cartão de crédito ou data de vencimento - remove da fatura
-                        if ( $vo->cartaoCredito->id != $old_vo->cartaoCredito->id || $vo->vencimento != $old_vo->vencimento ){
-                            $logger->addInfo('Movement Update: removendo movimento da fatura que ele estava associado.' );
-                            Movement::removeFromInvoice($fatura->id, $vo->id);
-                            CreditCardInvoice::addToInvoice($vo);
-                        }
-                    }else{
-                        //adiciona na nova fatura
+            //se o movimento está associado a um cartão de credito
+            if ( isset($vo->cartaoCredito) && $vo->cartaoCredito->id > 0 ){
+                $logger->addInfo('Movement Update: movimento associado a um cartão de crédito.' );
+                if ( isset($old_vo->cartaoCredito) && $old_vo->cartaoCredito->id > 0 ){
+                    //se houve alteração do cartão de crédito ou data de vencimento - remove da fatura
+                    if ( $vo->cartaoCredito->id != $old_vo->cartaoCredito->id || $vo->vencimento != $old_vo->vencimento ){
+                        $logger->addInfo('Movement Update: removendo movimento da fatura que ele estava associado.' );
+                        Movement::removeFromInvoice($fatura->id, $vo->id);
                         CreditCardInvoice::addToInvoice($vo);
                     }
-
+                }else{
+                    //adiciona na nova fatura
+                    CreditCardInvoice::addToInvoice($vo);
                 }
 
             }
-            
-            $logger->addInfo('Movement Update: preparando para alterar movimento...' );
 
-            DB::update(Movement::TABLE_NAME, 
-                ['descricao' => $vo->descricao,'emissao' => $vo->emissao,'vencimento' => $vo->vencimento,
-                 'valor' => $vo->valor,'status' => $vo->status,'operacao' => $vo->operacao,
-                 'finalidade' => $vo->finalidade->id,
-                 'contaBancaria' => isset($vo->contaBancaria) ? $vo->contaBancaria->id : null,
-                 'fornecedor' => isset($vo->fornecedor) ? $vo->fornecedor->id : null,
-                 'cartaoCredito' => isset($vo->cartaoCredito) ? $vo->cartaoCredito->id : null,
-                 'formaPagamento' => isset($vo->formaPagamento) ? $vo->formaPagamento->id : null], $vo->id);
+        }
+        
+        $logger->addInfo('Movement Update: preparando para alterar movimento...' );
+
+        DB::update(Movement::TABLE_NAME, 
+            ['descricao' => $vo->descricao,'emissao' => $vo->emissao,'vencimento' => $vo->vencimento,
+             'valor' => $vo->valor,'status' => $vo->status,'operacao' => $vo->operacao,
+             'finalidade' => $vo->finalidade->id,
+             'contaBancaria' => isset($vo->contaBancaria) ? $vo->contaBancaria->id : null,
+             'fornecedor' => isset($vo->fornecedor) ? $vo->fornecedor->id : null,
+             'cartaoCredito' => isset($vo->cartaoCredito) ? $vo->cartaoCredito->id : null,
+             'formaPagamento' => isset($vo->formaPagamento) ? $vo->formaPagamento->id : null], $vo->id);
+        
         DB::PDO()->commit();    
         return $vo;
     }

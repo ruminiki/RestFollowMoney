@@ -23,7 +23,6 @@ class CreditCardInvoice{
         return CreditCardInvoice::rowToObject($result);
     }
 
-
     public static function findByCrediCardPeriod($creditCard, $period){
         $result = DB::fetchUnique(INVOICE_BY_PERIOD_REFERENCE, [':creditCard' => $creditCard, ':period' => $period]);
         return CreditCardInvoice::rowToObject($result);
@@ -38,36 +37,68 @@ class CreditCardInvoice{
     public static function payInvoice($vo){
         global $logger;
         $logger->addInfo('CreditCardInvoice:PAYING invoice: ' . $vo->cartaoCredito->descricao . ' ' . $vo->mesReferencia);  
-        DB::PDO()->beginTransaction();
-            $vo->status = CreditCardInvoice::STATUS_CLOSED;
-            DB::update(CreditCardInvoice::TABLE_NAME, 
-                ['formaPagamento' => $vo->formaPagamento->id,
-                 'contaBancaria' => $vo->contaBancaria->id,
-                 'valorPagamento' => $vo->valorPagamento,
-                 'status' => $vo->status], $vo->id);
+        DB::beginTransaction();
 
-            //@TODO
-            //generate movement payment
+        //generate movement payment
 
-        DB::PDO()->commit();    
+        $movement = new stdClass();
+        $movement->descricao = 'FATURA (' . $vo->cartaoCredito->descricao . ' ' . strtoupper($vo->mesReferencia) . ')';
+        $movement->emissao = $vo->emissao;
+        $movement->vencimento = $vo->vencimento;
+        $movement->valor = $vo->valorPagamento;
+        $movement->status = 'PAGO';
+        $movement->operacao = 'DEBITO';
+        $finality = new stdClass();
+        $finality->id = 549;
+        $movement->finalidade = $finality;
+        $movement->contaBancaria = $vo->contaBancaria;
+        $movement->formaPagamento = $vo->formaPagamento;
+        $movement->usuario = $vo->usuario;
+        $movement->fatura = $vo;
+
+        $logger->addInfo('CreditCardInvoice:adding movement payment...');  
+        Movement::insert($movement);
+
+        //atualiza movimentos para PAGO    
+        $sql = "update movimento set status = 'PAGO' 
+                where id in (select movimento from movimentosFatura where fatura = :invoice)";
+        
+        DB::queryUpdate($sql, [':invoice'=>$vo->id]);
+
+        $vo->status = CreditCardInvoice::STATUS_CLOSED;
+        DB::update(CreditCardInvoice::TABLE_NAME, 
+            ['formaPagamento' => $vo->formaPagamento->id,
+             'contaBancaria' => $vo->contaBancaria->id,
+             'valorPagamento' => $vo->valorPagamento,
+             'status' => $vo->status], $vo->id);
+
+        DB::commit();    
         return $vo;
     }
 
     public static function unpayInvoice($vo){
         global $logger;
         $logger->addInfo('CreditCardInvoice:UNDONE PAYment invoice: ' . $vo->cartaoCredito->descricao . ' ' . $vo->mesReferencia);        
-        DB::PDO()->beginTransaction();      
-            $vo->status = CreditCardInvoice::STATUS_OPEN;
-            DB::update(CreditCardInvoice::TABLE_NAME, 
-                ['formaPagamento' => null,
-                 'contaBancaria' => null,
-                 'valorPagamento' => null,
-                 'status' => $vo->status], $vo->id);
+        DB::beginTransaction();   
+        
+        $logger->addInfo('CreditCardInvoice: deleting movement of payment invoice where invoice equal ' . $vo->id);
+        //delete movement payment
+        $sql = "delete from movimento where fatura = :invoice";
+        DB::queryDelete($sql, [':invoice'=>$vo->id]);
 
-            //@TODO
-            //delete movement payment
+        //atualiza movimentos para ABERTO    
+        $sql = "update movimento set status = 'A VENCER' where id in (select movimento from movimentosFatura where fatura = :invoice)";
+        
+        DB::queryUpdate($sql, [':invoice'=>$vo->id]);
 
-        DB::PDO()->commit();    
+        $vo->status = CreditCardInvoice::STATUS_OPEN;
+        DB::update(CreditCardInvoice::TABLE_NAME, 
+            ['formaPagamento' => null,
+             'contaBancaria' => null,
+             'valorPagamento' => null,
+             'status' => $vo->status], $vo->id);
+
+        DB::commit();    
         return $vo;
     }
 
@@ -136,7 +167,7 @@ class CreditCardInvoice{
         $fatura                        = new stdClass();
         $fatura->id                    = $row['id'];
         $fatura->emissao               = $row['emissao'];
-        $fatura->idUsuario             = $row['usuario'];
+        $fatura->usuario               = $row['usuario'];
         $fatura->vencimento            = $row['vencimento'];
         $fatura->valor                 = $row['valor'];
         $fatura->valorPagamento        = $row['valorPagamento'];
@@ -150,7 +181,7 @@ class CreditCardInvoice{
             $cartaoCredito->limite         = $row['limite'];
             $cartaoCredito->dataFatura     = $row['dataFatura'];
             $cartaoCredito->dataFechamento = $row['dataFechamento'];
-            $cartaoCredito->idUsuario      = $row['usuario'];
+            $cartaoCredito->usuario      = $row['usuario'];
             $fatura->cartaoCredito         = $cartaoCredito;
         }
 
@@ -159,7 +190,7 @@ class CreditCardInvoice{
             $formaPagamento->id            = $row['idFormaPagamento'];
             $formaPagamento->descricao     = $row['descricaoFormaPagamento'];
             $formaPagamento->sigla         = $row['siglaFormaPagamento'];
-            $formaPagamento->idUsuario     = $row['usuario'];
+            $formaPagamento->usuario     = $row['usuario'];
             $fatura->formaPagamento        = $formaPagamento;
         }
 
@@ -168,7 +199,7 @@ class CreditCardInvoice{
             $contaBancaria->id             = $row['idContaBancaria'];
             $contaBancaria->descricao      = $row['descricaoContaBancaria'];
             $contaBancaria->numero         = $row['numeroContaBancaria'];
-            $contaBancaria->idUsuario      = $row['usuario'];
+            $contaBancaria->usuario      = $row['usuario'];
             $fatura->contaBancaria         = $contaBancaria;
         }
         return $fatura;
