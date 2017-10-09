@@ -1,64 +1,27 @@
 <?php
 
-require_once("models/BankAccount.php");
-
+use \Models\BankAccount as BankAccount;
 use \Psr\Http\Message\ServerRequestInterface as Request;
 use \Psr\Http\Message\ResponseInterface as Response;
 
 $app->get('/bankAccounts/user/{user}', function (Request $request, Response $response) use ($app){
-
-    $newResponse = $response->withHeader('Content-type', 'application/json')
-            ->withHeader('Access-Control-Allow-Origin', '*')
-            ->withHeader('Access-Control-Allow-Headers', 'X-Requested-With, Content-Type, Accept, Origin, Authorization')
-            ->withHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-    
-    return $newResponse->withJson(BankAccount::listByUser($request->getAttribute('user')), 201);
-
+    $bankAccounts = BankAccount::where('usuario', $request->getAttribute('user'))->get();
+    return $bankAccounts->toJson();
 });
 
 $app->get('/bankAccounts/{id}', function(Request $request, Response $response) use ($app){
-
-    $newResponse = $response->withHeader('Content-type', 'application/json')
-            ->withHeader('Access-Control-Allow-Origin', '*')
-            ->withHeader('Access-Control-Allow-Headers', 'X-Requested-With, Content-Type, Accept, Origin, Authorization')
-            ->withHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-
-    return $newResponse->withJson(BankAccount::findByID($request->getAttribute('id')), 201);
-
+    $bankAccount = BankAccount::find($request->getAttribute('id'));
+    return $bankAccount->toJson();
 });
  
 $app->post('/bankAccounts', function(Request $request, Response $response) use ($app){
-
-    $newResponse = $response->withHeader('Content-type', 'application/json')
-            ->withHeader('Access-Control-Allow-Origin', '*')
-            ->withHeader('Access-Control-Allow-Headers', 'X-Requested-With, Content-Type, Accept, Origin, Authorization')
-            ->withHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-
-    $value = json_decode($request->getBody(), false);
-
-    return $newResponse->withJson(BankAccount::insert($value), 201);
+    return $response->withJson(BankAccount::updateOrCreate($request->getBody()), 201);
 });
  
 $app->put('/bankAccounts/{id}', function(Request $request, Response $response) use ($app){
-    
-    $newResponse = $response->withHeader('Content-type', 'application/json')
-            ->withHeader('Access-Control-Allow-Origin', '*')
-            ->withHeader('Access-Control-Allow-Headers', 'X-Requested-With, Content-Type, Accept, Origin, Authorization')
-            ->withHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-
-    $value = json_decode($request->getBody(), false);
-
-    return $newResponse->withJson(BankAccount::update($value), 201);
-
+    return $response->withJson(BankAccount::updateOrCreate($$request->getBody()), 201);
 });
 
 $app->delete('/bankAccounts/{id}', function(Request $request, Response $response) use ($app){
-    
-    $newResponse = $response->withHeader('Content-type', 'application/json')
-            ->withHeader('Access-Control-Allow-Origin', '*')
-            ->withHeader('Access-Control-Allow-Headers', 'X-Requested-With, Content-Type, Accept, Origin, Authorization')
-            ->withHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-
-    return $newResponse->withJson(BankAccount::delete($request->getAttribute('id')), 201);
-    
+    return $response->withJson(BankAccount::destroy($request->getAttribute('id')), 201);
 });

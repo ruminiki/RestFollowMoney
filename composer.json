@@ -2,11 +2,18 @@
 	"require": {
 		"slim/slim": "^3.0",
 		"monolog/monolog": "^1.17",
-		"slim/pdo": "~1.10"
+		"slim/pdo": "~1.10",
+		"illuminate/database": "~5.1",
+		"dyorg/slim-token-authentication": "^0.3.3",
+		"slim/middleware": "^1.0"
 	},
 	"autoload": {
 		"psr-4": {
-			"controllers\\": "controllers"
+			"controllers\\": "controllers",
+			"Models\\": "models/",
+			"App\\Exceptions\\": "app/exceptions/",
+			"App\\Handlers\\": "app/handlers/",
+			"App\\Auth\\": "app/auth/"
 		}
 	}
 }
