@@ -13,7 +13,8 @@
 			"Models\\": "models/",
 			"App\\Exceptions\\": "app/exceptions/",
 			"App\\Handlers\\": "app/handlers/",
-			"App\\Auth\\": "app/auth/"
+			"App\\Auth\\": "app/auth/",
+			"App\\Util\\": "app/util/"
 		}
 	}
 }

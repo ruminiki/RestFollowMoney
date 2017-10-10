@@ -21,7 +21,6 @@ OK na tela inicial exibir o saldo anterior e o saldo previsto
 
 - ao detalhar e alterar/remover movimento de fatura ou extrato, retornar para listagem;
 
-
 - finalidades com acento primeira letra;
 - cor em finalidade;
 - criar arquivo com mensagens de erro;

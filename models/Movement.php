@@ -1,286 +1,120 @@
 <?php
 
-require_once("dao/DB.php");
-require_once("dao/SQLs.php");
-require_once("models/CreditCardInvoice.php");
+namespace Models;  
+use \Models\CreditCardInvoice as CreditCardInvoice;
+use \App\Util\DateUtil as DateUtil;
 
-class Movement{
+class Movement extends \Illuminate\Database\Eloquent\Model {  
 
-    const TABLE_NAME='movimento';
+    protected $table    = 'movimento';
+    const STATUS_PAYD   = 'PAGO';
+    const STATUS_TO_PAY = 'A PAGAR';
+    const DEBIT         = 'DEBITO';
+    const CREDIT        = 'CREDITO';
 
-    public static function listByUserPeriod($user, $period){
-        $sql = SQL_MOVIMENTO . " WHERE m.usuario = :user 
-                                 and SUBSTRING(m.vencimento, 1, 6) = :period
-                                 and m.hashTransferencia = ''
-                                 and m.fatura is null
-                                 order by m.vencimento desc, m.emissao desc, m.descricao asc";
-        $result = DB::executeQuery($sql, [':user' => $user, ':period' => $period]);
-        return Movement::resultToArray($result);
+    public function bankAccount(){
+        return $this->belongsTo(\Models\BankAccount::class, 'contaBancaria', 'id');
     }
 
-    public static function findByID($id){
-        $sql = SQL_MOVIMENTO . " WHERE m.id = :id";
-        $result = DB::fetchUnique($sql, [':id' => $id]);
-        return Movement::rowToObject($result);
+    public function creditCard(){
+        return $this->belongsTo(\Models\CreditCard::class, 'cartaoCredito', 'id');
     }
 
-    public function listByInvoice($invoice){
-        $sql = SQL_MOVIMENTO . " inner join movimentosFatura mf on mf.movimento = m.id 
-                                 where mf.fatura = :invoice
-                                 order by m.vencimento desc, m.emissao desc, m.descricao asc";
-        $result = DB::executeQuery($sql, [':invoice' => $invoice]);
-        return Movement::resultToArray($result);
+    public function finality(){
+        return $this->belongsTo(\Models\Finality::class, 'finalidade', 'id');
     }
 
-    public function listByBankAccountPeriod($bankAccount, $period){
-        $sql = SQL_MOVIMENTO . " WHERE m.contaBancaria = :bankAccount 
-                                 and SUBSTRING(m.vencimento, 1, 6) = :period 
-                                 order by m.vencimento desc, m.emissao desc, m.descricao asc";
-        $result = DB::executeQuery($sql, [':bankAccount' => $bankAccount, 'period' => $period]);
-        return Movement::resultToArray($result);
+    public function invoice(){
+        return $this->belongsTo(\Models\CreditCardInvoice::class, 'fatura', 'id');
     }
 
-    public function getPreviousBalance($user, $period){
-        $result = DB::executeQuery(PREVIOUS_BALANCE, [':user' => $user, 'period' => $period]);
-        $balance = 0;
-        foreach ($result as $key => $row) {
-            strtoupper($row['operacao']) == 'DEBITO' ? $balance -= $row['valor'] : $balance += $row['valor'];
-        }
-        return $balance; 
-    }
+   
+    public function validateUpdateDelete(){
 
-    public function getPreviousBalanceBankAccount($bankAccount, $period){
-        $result = DB::executeQuery(PREVIOUS_BALANCE_BANK_ACCOUNT, [':bankAccount' => $bankAccount, 'period' => $period]);
-        $balance = 0;
-        foreach ($result as $key => $row) {
-            strtoupper($row['operacao']) == 'DEBITO' ? $balance -= $row['valor'] : $balance += $row['valor'];
-        }
-        return $balance; 
-    }
-
-    public static function insert($vo){
-        $id = DB::insert(Movement::TABLE_NAME, 
-            ['descricao','emissao','vencimento','valor','status','operacao','finalidade',
-             'contaBancaria','fornecedor','cartaoCredito','formaPagamento','fatura','usuario'], 
-             [$vo->descricao,$vo->emissao,$vo->vencimento,$vo->valor,$vo->status,$vo->operacao,$vo->finalidade->id,
-              $vo->contaBancaria->id,$vo->fornecedor->id,$vo->cartaoCredito->id,$vo->formaPagamento->id,$vo->fatura->id,$vo->usuario]);
-
-        $vo->id = $id;
-
-        //se o movimento for de cartão de crédito gerenciar a fatura
-        if ( isset($vo->cartaoCredito) && $vo->cartaoCredito->id > 0 ){
-            echo 'CREDIT CARD ID: ' . $vo->cartaoCredito->id;
-            CreditCardInvoice::addToInvoice($vo);
-        }
-        
-        return $vo;
-    }
-
-    public static function update($vo){
-        DB::PDO()->beginTransaction();
-
-        global $logger;
-
-        if ( Movement::isInvoicePayment($vo) ){
-            $logger->addInfo('\n Movement Update: isInvoicePayment.' );
-            throw new Exception("O movimento não pode ser alterado pois se trata do pagamento de fatura de cartão de crédito. Caso deseje, cancele o pagamento da fatura para que o movimento seja removido.");
+        if ( $this->invoice != null && $this->invoice->id > 0 ){
+            $logger->addInfo('\n Movement validate update/delete: isInvoicePayment.' );
+            throw new Exception("O movimento não pode ser alterado/removido pois se trata do pagamento de fatura de cartão de crédito. Caso deseje, cancele o pagamento da fatura para que o movimento seja removido.");
         }
 
-        if ( !empty($vo->hashTransferencia) ){
-            $logger->addInfo('\n Movement:update: movimento é uma transfência bancária.' );
-            throw new Exception("O movimento é uma transferência bancária e não pode ser alterado. Estorne a transfência e relance novamente.");
+        if ( !empty($this->hashTransferencia) ){
+            $logger->addInfo('\n Movement validate update/delete: movimento é uma transfência bancária.' );
+            throw new Exception("O movimento é uma transferência bancária e não pode ser alterado/removido. Tente extornar o lançamento.");
         }
 
-        $old_vo = Movement::findByID($vo->id);
+        $movementOld = Movement::find($this->id);
+        $movementInvoice = MovementsInvoice::where('movimento', $movementOld->id)->first();
 
-        if ( Movement::isInClosedInvoice($vo) ){
-            $logger->addInfo('Movement Update: isInClosedInvoice.' );
-            //se não alterou/removeu o cartão de credito, nem data de vencimento e operacao não tem problema
-            if ( isset($vo->cartaoCredito) && $vo->cartaoCredito->id <= 0 
-                    || ($vo->cartaoCredito->id != $old_vo->cartaoCredito->id 
-                        || $vo->vencimento != $old_vo->vencimento 
-                            || $vo->operacao != $old_vo->operacao
-                                || $vo->valor != $old_vo->valor) ){
-                    $logger->addInfo('Movement Update: tentativa de alterar o cc/vencimento/operacao de um movimento em fatura fechada.' );
-                    throw new Exception('O movimento selecionado está relacionado a uma fatura FECHADA. É necessário primeiro reabrir a fatura para alterar o movimento.');
-            }
-        }else{
-
-            //se o movimento está associado a um cartão de credito
-            if ( isset($vo->cartaoCredito) && $vo->cartaoCredito->id > 0 ){
-                $logger->addInfo('Movement Update: movimento associado a um cartão de crédito.' );
-                if ( isset($old_vo->cartaoCredito) && $old_vo->cartaoCredito->id > 0 ){
-                    //se houve alteração do cartão de crédito ou data de vencimento - remove da fatura
-                    if ( $vo->cartaoCredito->id != $old_vo->cartaoCredito->id || $vo->vencimento != $old_vo->vencimento ){
-                        $logger->addInfo('Movement Update: removendo movimento da fatura que ele estava associado.' );
-                        Movement::removeFromInvoice($fatura->id, $vo->id);
-                        CreditCardInvoice::addToInvoice($vo);
-                    }
-                }else{
-                    //adiciona na nova fatura
-                    CreditCardInvoice::addToInvoice($vo);
-                }
-
-            }
-
-        }
-        
-        $logger->addInfo('Movement Update: preparando para alterar movimento...' );
-
-        DB::update(Movement::TABLE_NAME, 
-            ['descricao' => $vo->descricao,'emissao' => $vo->emissao,'vencimento' => $vo->vencimento,
-             'valor' => $vo->valor,'status' => $vo->status,'operacao' => $vo->operacao,
-             'finalidade' => $vo->finalidade->id,
-             'contaBancaria' => isset($vo->contaBancaria) ? $vo->contaBancaria->id : null,
-             'fornecedor' => isset($vo->fornecedor) ? $vo->fornecedor->id : null,
-             'cartaoCredito' => isset($vo->cartaoCredito) ? $vo->cartaoCredito->id : null,
-             'formaPagamento' => isset($vo->formaPagamento) ? $vo->formaPagamento->id : null], $vo->id);
-        
-        DB::PDO()->commit();    
-        return $vo;
-    }
-
-    public static function delete($id){
-        DB::PDO()->beginTransaction();
-            global $logger;
-            $vo = Movement::findByID($id);
-
-            if ( Movement::isInvoicePayment($vo) ){
-                $logger->addInfo('Movement:delete: isInvoicePayment.' );
-                throw new Exception("O movimento não pode ser removido pois se trata do pagamento de fatura de cartão de crédito. Caso deseje, cancele o pagamento da fatura para que o movimento seja removido.");
-            }
-
-            if ( !empty($vo->hashTransferencia) && strlen($vo->hashTransferencia) > 0 ){
-                $logger->addInfo('Movement:delete: movimento é uma transfência bancária.' );
-                throw new Exception("O movimento é uma transferência bancária e não pode ser removido. Utilize a função de estorno.");
-            }
-
-            //se o movimento está ligado a uma fatura
-            $invoice = Movement::isInInvoice($vo);
-            if ( isset($invoice) && $invoice->id > 0 ){
-                $logger->addInfo('Movement:delete: movimento está em uma fatura.' );
-                if ( $invoice->status == CreditCardInvoice::STATUS_CLOSED ){
-                    throw new Exception('O movimento pertence a uma fatura fechada. É necessário cancelar o pagamento da fatura para poder remover o lançamento.');                      
-                }else{
-                    $logger->addInfo('Movement:delete: removendo movimento da fatura.' );
-                    Movement::removeFromInvoice($invoice->id, $id);
-                }
-            }
-            DB::delete(Movement::TABLE_NAME, $id);
-        DB::PDO()->commit();    
-        return $vo;
-    }
-
-    //===========INVOICES=========================
-    public static function removeFromInvoice($invoice_id, $movement_id){
-        //remove o movimento da fatura que ele estiver ligado    
-        DB::PDO()->delete()->from("movimentosFatura")->where('fatura', '=', $invoice_id, 'and', 'movimento', '=', $movement_id);
-    }
-
-    private static function isInClosedInvoice($movement){
-        $result = DB::fetchUnique(MOVEMENT_CLOSED_INVOICE, [':movement' => $movement->id]);
-        //O MOVIMENTO ESTÁ ASSOCIADO A UMA FATURA FECHADA
-        if ( isset($result) && $result['status'] == CreditCardInvoice::STATUS_CLOSED ){
-            return true;
-        }
-        return false;
-    }
-
-    private static function isInInvoice($movement){
-        $result = DB::fetchUnique(MOVEMENT_IN_INVOICE, [':movement' => $movement->id]);
-        return CreditCardInvoice::rowToObject($result);
-    }
-
-    private static function isInvoicePayment($movement){
-        //O MOVIMENTO É O PAGAMENTO DE UMA FATURA  
-        if ( !empty($movement->fatura) && $movement->fatura->id > 0 ){
-            return true;
-        }
-        return false;
-    }
-
-    //===============CONVERTE RETORNO DO BANCO EM LISTA DE OBJTOS======================
-    public function resultToArray($result){
-        $list = array();
-        
-        foreach ($result as $key => $value) {
-            array_push($list, Movement::rowToObject($value));
-        }
-
-        return $list;
-    }
+        if ( $this->isInClosedInvoice() ){
+            if ( ($movementOld->creditCard->id != $this->creditCard->id) ||
+                 ($movementOld->operacao != $this->operacao) ||
+                 ($movementOld->vencimento != $this->vencimento) ){
     
-    public function rowToObject($row){
-        $movimento                     = new stdClass();
-        $movimento->id                 = $row['id'];
-        $movimento->descricao          = $row['descricao'];
-        $movimento->idUsuario          = $row['usuario'];
-        $movimento->emissao            = $row['emissao']; 
-        $movimento->vencimento         = $row['vencimento']; 
-        $movimento->movimentoOrigem    = $row['movimentoOrigem'];
-        $movimento->parcela            = $row['parcela'];
-        $movimento->valor              = $row['valor'];
-        $movimento->hashParcelas       = $row['hashParcelas'];
-        $movimento->hashTransferencia  = $row['hashTransferencia'];
-        $movimento->status             = $row['status'];
-        $movimento->operacao           = $row['operacao'];
-        
-        if ( $row['idFinalidade'] > 0 ){
-            $finalidade                    = new stdClass();
-            $finalidade->id                = $row['idFinalidade'];
-            $finalidade->descricao         = $row['descricaoFinalidade'];
-            $finalidade->idUsuario         = $row['usuario'];
-            $movimento->finalidade         = $finalidade;
+                $logger->addInfo('Movement validate update/delete: tentativa de alterar o cc/vencimento/operacao de um movimento em fatura fechada.' );
+                throw new Exception('O movimento selecionado está relacionado a uma fatura FECHADA. É necessário primeiro reabrir a fatura para alterar/remover o movimento.');
+            }
+        }
+    }
+
+    public function isInClosedInvoice(){
+        $movementInvoice = MovementsInvoice::where('movimento', $this->id)->first();
+
+        //o movimento está em uma fatura
+        if ( $movementInvoice != null ){ //is in invoice
+            $invoice = CreditCardInvoice::find($movementInvoice->fatura);
+            if ( $invoice != null && $invoice->isClosed() ){
+                return true;
+            }
         }
 
-        if ( $row['idContaBancaria'] > 0 ){
-            $contaBancaria                 = new stdClass();
-            $contaBancaria->id             = $row['idContaBancaria'];
-            $contaBancaria->descricao      = $row['descricaoContaBancaria'];
-            $contaBancaria->numero         = $row['numeroContaBancaria'];
-            $contaBancaria->digito         = $row['digitoContaBancaria'];
-            $contaBancaria->usuario        = $row['usuario'];
-            $movimento->contaBancaria      = $contaBancaria;
-        }        
+        return false;
+    }
 
-        if ( $row['idFornecedor'] > 0 ){
-            $fornecedor                    = new stdClass();
-            $fornecedor->id                = $row['idFornecedor'];
-            $fornecedor->descricao         = $row['descricaoFornecedor'];
-            $movimento->fornecedor         = $fornecedor;
-        }
-        
-        if ( $row['idFormaPagamento'] > 0 ){
-            $formaPagamento                = new stdClass();
-            $formaPagamento->id            = $row['idFormaPagamento'];
-            $formaPagamento->descricao     = $row['descricaoFormaPagamento'];
-            $formaPagamento->sigla         = $row['siglaFormaPagamento'];
-            $formaPagamento->usuario       = $row['usuario'];
-            $movimento->formaPagamento     = $formaPagamento;
+    public function isInOpenInvoice(){
+        $movementInvoice = MovementsInvoice::where('movimento', $this->id)->first();
+
+        //o movimento está em uma fatura
+        if ( $movementInvoice != null ){ //is in invoice
+            $invoice = CreditCardInvoice::find($movementInvoice->fatura);
+            if ( $invoice != null && !$invoice->isClosed() ){
+                return true;
+            }
         }
 
-        if ( $row['idCartaoCredito'] > 0 ){
-            $cartaoCredito                 = new stdClass();
-            $cartaoCredito->id             = $row['idCartaoCredito'];
-            $cartaoCredito->descricao      = $row['descricaoCartaoCredito'];
-            $cartaoCredito->limite         = $row['limite'];
-            $cartaoCredito->dataFatura     = $row['dataFatura'];
-            $cartaoCredito->dataFechamento = $row['dataFechamento'];
-            $cartaoCredito->usuario        = $row['usuario'];
-            $movimento->cartaoCredito      = $cartaoCredito;
-        }
-        
-        if ( $row['idFatura'] > 0 ){
-            $fatura                        = new stdClass();
-            $fatura->id                    = $row['idFatura'];
-            $fatura->mesReferencia         = $row['mesReferencia'];
-            $fatura->valor                 = $row['valorFatura'];
-            $fatura->valorPagamento        = $row['valorPagamentoFatura'];
-            $fatura->usuario               = $row['usuario'];
-            $movimento->fatura             = $fatura;
+        return false;
+    }
+
+    public function addToInvoice(){
+        $mesReferencia = DateUtil::mesReferenciaFromDateString($this->vencimento);
+        $invoice = CreditCardInvoice::whereRaw('cartaoCredito = ? and mesReferencia = ?', [$this->creditCard->id, $mesReferencia])->first();
+
+        if ( $invoice == null ){
+            $emissao = date_format(now(), 'Ymd');
+            if ( DateUtil::getMonth($this->vencimento) == '01' ){
+                $ano = (intval(DateUtil::getYear($this->vencimento)) + 1);
+                $mes = DateUtil::getMonth($this->vencimento);
+                $dia = $this->creditCard->dataFechamento;
+                $emissao = $ano.$mes.$dia;
+            }else{ 
+                $ano = DateUtil::getYear($this->vencimento);
+                $mes = DateUtil::getMesProximo(DateUtil::getMonth($this->vencimento));
+                $dia = $this->creditCard->dataFechamento;
+                $emissao = $ano.$mes.$dia;
+            }
+
+            $invoice = new CreditCardInvoice();
+            $invoice->emissao       = $emissao;
+            $invoice->vencimento    = $this->vencimento;
+            $invoice->mesReferencia = $mesReferencia;
+            $invoice->creditCard    = $this->creditCard;
+            $invoice->usuario       = $this->usuario;
+
+            $invoice->save();
         }
 
-        return $movimento;
+        $movementInvoice = new MovementsInvoice();
+        $movementInvoice->fatura = $invoice->id;
+        $movementInvoice->movimento = $this->id;
+        $movementInvoice->save();
     }
 
 }

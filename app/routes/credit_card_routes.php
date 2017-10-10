@@ -51,7 +51,6 @@ $app->put('/creditCards/{id}', function(Request $request, Response $response) us
     }catch(Exception $e){
         throw new Exception("Error Processing Request: " . $e->getMessage(), 1);
     }
-    
 });
 
 $app->delete('/creditCards/{id}', function(Request $request, Response $response) use ($app){

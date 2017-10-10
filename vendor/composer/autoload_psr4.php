@@ -26,6 +26,7 @@ return array(
     'FastRoute\\' => array($vendorDir . '/nikic/fast-route/src'),
     'Doctrine\\Common\\Inflector\\' => array($vendorDir . '/doctrine/inflector/lib/Doctrine/Common/Inflector'),
     'Carbon\\' => array($vendorDir . '/nesbot/carbon/src/Carbon'),
+    'App\\Util\\' => array($baseDir . '/app/util'),
     'App\\Handlers\\' => array($baseDir . '/app/handlers'),
     'App\\Exceptions\\' => array($baseDir . '/app/exceptions'),
     'App\\Auth\\' => array($baseDir . '/app/auth'),
