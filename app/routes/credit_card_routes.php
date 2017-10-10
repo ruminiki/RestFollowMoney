@@ -1,65 +1,59 @@
 <?php
 
-require_once("models/CreditCard.php");
-
+use \Models\CreditCard as CreditCard;
 use \Psr\Http\Message\ServerRequestInterface as Request;
 use \Psr\Http\Message\ResponseInterface as Response;
 
 $app->get('/creditCards/user/{user}', function (Request $request, Response $response) use ($app){
-
-    $newResponse = $response->withHeader('Content-type', 'application/json')
-            ->withHeader('Access-Control-Allow-Origin', '*')
-            ->withHeader('Access-Control-Allow-Headers', 'X-Requested-With, Content-Type, Accept, Origin, Authorization')
-            ->withHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-    
-    return $newResponse->withJson(CreditCard::listByUser($request->getAttribute('user')), 201);
-
+    $creditCards = CreditCard::where('usuario', $request->getAttribute('user'))->get();
+    return $creditCards->toJson();
 });
 
 $app->get('/creditCards/{id}', function(Request $request, Response $response) use ($app){
-
-    $newResponse = $response->withHeader('Content-type', 'application/json')
-            ->withHeader('Access-Control-Allow-Origin', '*')
-            ->withHeader('Access-Control-Allow-Headers', 'X-Requested-With, Content-Type, Accept, Origin, Authorization')
-            ->withHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-
-    return $newResponse->withJson(CreditCard::findByID($request->getAttribute('id')), 201);
-
+    $creditCard = CreditCard::find($request->getAttribute('id'));
+    return $creditCard->toJson();
 });
  
-$app->post('/creditCards/', function(Request $request, Response $response) use ($app){
+$app->post('/creditCards', function(Request $request, Response $response) use ($app){
+    try{
+        $data = json_decode($request->getBody(), false);
 
-    $newResponse = $response->withHeader('Content-type', 'application/json')
-            ->withHeader('Access-Control-Allow-Origin', '*')
-            ->withHeader('Access-Control-Allow-Headers', 'X-Requested-With, Content-Type, Accept, Origin, Authorization')
-            ->withHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+        $cc = new CreditCard();
+        $cc->descricao      = $data->descricao;
+        $cc->limite         = $data->limite;
+        $cc->dataFatura     = $data->dataFatura;
+        $cc->dataFechamento = $data->dataFechamento;
+        $cc->usuario        = $data->usuario;
 
-    $value = json_decode($request->getBody(), false);
+        $cc->save();
 
-    return $newResponse->withJson(CreditCard::insert($value), 201);
+        return $response->withJson($cc, 201);
+    }catch(Exception $e){
+        throw new Exception("Error Processing Request: " . $e->getMessage(), 1);
+    }
+    
 });
  
 $app->put('/creditCards/{id}', function(Request $request, Response $response) use ($app){
+    try{
+        $data = json_decode($request->getBody(), false);
+
+        $cc = CreditCard::find($data->id);
+        $cc->descricao      = $data->descricao;
+        $cc->limite         = $data->limite;
+        $cc->dataFatura     = $data->dataFatura;
+        $cc->dataFechamento = $data->dataFechamento;
+        $cc->usuario        = $data->usuario;
+
+        $cc->save();
+
+        return $response->withJson($cc, 201);
+    }catch(Exception $e){
+        throw new Exception("Error Processing Request: " . $e->getMessage(), 1);
+    }
     
-    $newResponse = $response->withHeader('Content-type', 'application/json')
-            ->withHeader('Access-Control-Allow-Origin', '*')
-            ->withHeader('Access-Control-Allow-Headers', 'X-Requested-With, Content-Type, Accept, Origin, Authorization')
-            ->withHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-
-    $value = json_decode($request->getBody(), false);
-
-    return $newResponse->withJson(CreditCard::update($value), 201);
-
 });
 
 $app->delete('/creditCards/{id}', function(Request $request, Response $response) use ($app){
-    
-    $newResponse = $response->withHeader('Content-type', 'application/json')
-            ->withHeader('Access-Control-Allow-Origin', '*')
-            ->withHeader('Access-Control-Allow-Headers', 'X-Requested-With, Content-Type, Accept, Origin, Authorization')
-            ->withHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-
-    return $newResponse->withJson(CreditCard::delete($request->getAttribute('id')), 201);
-    
+    return $response->withJson(CreditCard::destroy($request->getAttribute('id')), 201);
 });
-

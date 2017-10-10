@@ -1,54 +1,39 @@
 <?php
 
-require_once("models/CreditCardInvoice.php");
-
+use \Models\CreditCardInvoice as CreditCardInvoice;
 use \Psr\Http\Message\ServerRequestInterface as Request;
 use \Psr\Http\Message\ResponseInterface as Response;
 
 $app->get('/creditCardInvoices/creditCard/{creditCard}', function(Request $request, Response $response) use ($app){
-
-    $newResponse = $response->withHeader('Content-type', 'application/json')
-            ->withHeader('Access-Control-Allow-Origin', '*')
-            ->withHeader('Access-Control-Allow-Headers', 'X-Requested-With, Content-Type, Accept, Origin, Authorization')
-            ->withHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-    
-    return $newResponse->withJson(CreditCardInvoice::listByCreditCard($request->getAttribute('creditCard')), 201);
-
+    $invoices = CreditCardInvoice::where('cartaoCredito', $request->getAttribute('creditCard'))->get();
+    return $invoices->toJson();
 });
 
 $app->get('/creditCardInvoices/{id}', function(Request $request, Response $response) use ($app){
-
-    $newResponse = $response->withHeader('Content-type', 'application/json')
-            ->withHeader('Access-Control-Allow-Origin', '*')
-            ->withHeader('Access-Control-Allow-Headers', 'X-Requested-With, Content-Type, Accept, Origin, Authorization')
-            ->withHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-    
-    return $newResponse->withJson(CreditCardInvoice::findByID($request->getAttribute('id')), 201);
-
+    $invoice = CreditCardInvoice::find($request->getAttribute('id'));
+    return $invoice->toJson();
 });
-   
+
 $app->put('/creditCardInvoices/pay/{id}', function(Request $request, Response $response) use ($app){
-    global $logger;
-    $newResponse = $response->withHeader('Content-type', 'application/json')
-            ->withHeader('Access-Control-Allow-Origin', '*')
-            ->withHeader('Access-Control-Allow-Headers', 'X-Requested-With, Content-Type, Accept, Origin, Authorization')
-            ->withHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-
-	$value = json_decode($request->getBody(), false);
-
-    return $newResponse->withJson(CreditCardInvoice::payInvoice($value), 201);
-
+    $invoice = CreditCardInvoice::find($request->getAttribute('id'));
+    $invoice->pay();
+    return $newResponse->withJson($invoice, 201);
 });
 
 $app->put('/creditCardInvoices/unpay/{id}', function(Request $request, Response $response) use ($app){
-    global $logger;
-    $newResponse = $response->withHeader('Content-type', 'application/json')
-            ->withHeader('Access-Control-Allow-Origin', '*')
-            ->withHeader('Access-Control-Allow-Headers', 'X-Requested-With, Content-Type, Accept, Origin, Authorization')
-            ->withHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-
-	$value = json_decode($request->getBody(), false);
-
-    return $newResponse->withJson(CreditCardInvoice::unpayInvoice($value), 201);
-
+    $invoice = CreditCardInvoice::find($request->getAttribute('id'));
+    $invoice->unpay();
+    return $newResponse->withJson($invoice, 201);
 });
+
+ 
+
+
+
+
+
+
+
+
+
+   

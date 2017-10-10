@@ -14,7 +14,7 @@
 
     const DSN = 'mysql:host=localhost;dbname=fmdb;charset=latin1';  
     const USR = 'root';
-    const PWD = 'dust258';
+    const PWD = '';
 
    public static function PDO(){
       if (DB::$PDO === null){

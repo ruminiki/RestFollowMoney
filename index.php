@@ -4,11 +4,11 @@
 $loader = require 'vendor/autoload.php';
 
 require_once "app/handlers/Error.php";
-use Models\User as User;
 
 $config = [
     'settings' => [
         'templates.path' => 'templates',
+        'debug' => true,
         'logger' => [
             'log.enabled' => true,
             'name' => 'slim-app',
@@ -20,7 +20,7 @@ $config = [
             'host' => 'localhost',
             'database' => 'fmdb',
             'username' => 'root',
-            'password' => 'dust258',
+            'password' => '',
             'charset'   => 'latin1',
             'collation' => 'latin1_swedish_ci',
             'prefix'    => '',
@@ -80,8 +80,8 @@ $c['errorHandler'] = function ($c) {
 
     	global $logger;
     	$logger->addWarning($exception->getMessage());
-    	$logger->addInfo('Rollback transaction...');
-    	DB::rollback();
+    	//$logger->addInfo('Rollback transaction...');
+    	//DB::rollback();
 
 	    $newResponse = $response->withHeader('Content-type', 'application/json')
         ->withHeader('Content-Type', 'charset=unicode')
@@ -96,7 +96,7 @@ $c['errorHandler'] = function ($c) {
 
 //==========ROUTES==========================
 
-require_once "app/routes/finalitie_routes.php";
+require_once "app/routes/finality_routes.php";
 require_once "app/routes/bank_account_routes.php";
 require_once "app/routes/payment_form_routes.php";
 require_once "app/routes/credit_card_routes.php";
@@ -105,29 +105,27 @@ require_once "app/routes/movement_routes.php";
 
 
 //==========TOKEN AUTHENTICATION=============
-$app->add(new App\Auth\TokenAuth());
+/*
+use Slim\Middleware\TokenAuthentication;
+use Models\User as User;
+$authenticator = function($request, TokenAuthentication $tokenAuth){
+    # Search for token on header, parameter, cookie or attribute
+    $token = $tokenAuth->findToken($request);
+    $logger->addInfo('Authentication:token ' . $token);
+    # Your method to make token validation
+    $user = User::where('token', $token);
+    $logger->addInfo('Authentication:user ' . $user->nome);
+    # If occured ok authentication continue to route
+    # before end you can storage the user informations or whatever
+};*/
 
-/*$app->get('/users/{user}', function($request, $response) {
+/*$app->add(new TokenAuthentication([
+    'secure' => false,
+    'path' => '/',
+    'authenticator' => $authenticator
+]));*/
 
-    $newResponse = $response->withHeader('Content-type', 'application/json')
-            ->withHeader('Access-Control-Allow-Origin', '*')
-            ->withHeader('Access-Control-Allow-Headers', 'X-Requested-With, Content-Type, Accept, Origin, Authorization')
-            ->withHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-    
-    global $logger;
-    $token = User::find($request->getAttribute('user'))->token;
-    
-    if ( !$token ){
-        $logger->addWarning('User not authenticated!');
-    }else{
-        $logger->addInfo('Token authentication: ' . $token->token);
-    }
-
-    return $response->getBody()->write($token->toJson());
-
-});*/
- 
-
+//==========================================
 
 //Rodando aplicação
 $app->run();

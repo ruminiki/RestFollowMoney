@@ -1,37 +1,32 @@
 <?php
 
-require_once("dao/DB.php");
-require_once("dao/SQLs.php");
-require_once("models/CreditCard.php");
 require_once("app/util/DateUtil.php");
 
-class CreditCardInvoice{
+namespace Models;
 
-    const TABLE_NAME    = 'fatura';
+class CreditCardInvoice extends \Illuminate\Database\Eloquent\Model {
+
+    protected $table    = 'fatura';
     const STATUS_CLOSED = 'FECHADA';
     const STATUS_OPEN   = 'ABERTA';
 
-    public static function listByCreditCard($creditCard){
-        $result = DB::executeQuery(INVOICE_BY_CREDIT_CARD, [':creditCard' => $creditCard]);
-        return CreditCardInvoice::resultToArray($result);
-    }
-
-    public static function findByID($id){
-        global $logger;
-        $logger->addInfo('CreditCardInvoice:findByID: ' . $id);
-        $result = DB::fetchUnique(INVOICE_BY_ID, [':id' => $id]);
-        return CreditCardInvoice::rowToObject($result);
-    }
-
-    public static function findByCrediCardPeriod($creditCard, $period){
-        $result = DB::fetchUnique(INVOICE_BY_PERIOD_REFERENCE, [':creditCard' => $creditCard, ':period' => $period]);
-        return CreditCardInvoice::rowToObject($result);
-    }
-
     public static function insert($vo){
-        return DB::insert(CreditCardInvoice::TABLE_NAME, 
-            ['emissao', 'vencimento', 'cartaoCredito', 'mesReferencia', 'usuario'], 
-            [$vo->emissao, $vo->vencimento, $vo->cartaoCredito, $vo->mesReferencia, $vo->usuario]);
+        try{
+            $data = json_decode($request->getBody(), false);
+
+            $cc = new CreditCardInvoice();
+            $cc->emissao        = $data->descricao;
+            $cc->vencimento     = $data->limite;
+            $cc->dataFatura     = $data->dataFatura;
+            $cc->dataFechamento = $data->dataFechamento;
+            $cc->usuario        = $data->usuario;
+
+            $cc->save();
+
+            return $in;
+        }catch(Exception $e){
+            throw new Exception("Error Processing Request: " . $e->getMessage(), 1);
+        }
     }
 
     public static function payInvoice($vo){

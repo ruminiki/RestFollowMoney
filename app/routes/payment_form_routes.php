@@ -1,65 +1,54 @@
 <?php
 
-require_once("models/PaymentForm.php");
-
+use \Models\PaymentForm as PaymentForm;
 use \Psr\Http\Message\ServerRequestInterface as Request;
 use \Psr\Http\Message\ResponseInterface as Response;
 
 $app->get('/paymentForms/user/{user}', function (Request $request, Response $response) use ($app){
-
-    $newResponse = $response->withHeader('Content-type', 'application/json')
-            ->withHeader('Access-Control-Allow-Origin', '*')
-            ->withHeader('Access-Control-Allow-Headers', 'X-Requested-With, Content-Type, Accept, Origin, Authorization')
-            ->withHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-    
-    return $newResponse->withJson(PaymentForm::listByUser($request->getAttribute('user')), 201);
-
+    $paymentForms = PaymentForm::where('usuario', $request->getAttribute('user'))->get();
+    return $paymentForms->toJson();
 });
 
 $app->get('/paymentForms/{id}', function(Request $request, Response $response) use ($app){
-
-    $newResponse = $response->withHeader('Content-type', 'application/json')
-            ->withHeader('Access-Control-Allow-Origin', '*')
-            ->withHeader('Access-Control-Allow-Headers', 'X-Requested-With, Content-Type, Accept, Origin, Authorization')
-            ->withHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-
-    return $newResponse->withJson(PaymentForm::findByID($request->getAttribute('id')), 201);
-
+    $paymentForm = PaymentForm::find($request->getAttribute('id'));
+    return $paymentForm->toJson();
 });
  
 $app->post('/paymentForms', function(Request $request, Response $response) use ($app){
+    try{
+        $data = json_decode($request->getBody(), false);
 
-    $newResponse = $response->withHeader('Content-type', 'application/json')
-            ->withHeader('Access-Control-Allow-Origin', '*')
-            ->withHeader('Access-Control-Allow-Headers', 'X-Requested-With, Content-Type, Accept, Origin, Authorization')
-            ->withHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+        $pf = new PaymentForm();
+        $pf->descricao = $data->descricao;
+        $pf->sigla     = $data->numero;
+        $pf->usuario   = $data->usuario;
 
-    $value = json_decode($request->getBody(), false);
+        $pf->save();
 
-    //echo $value;
-    return $newResponse->withJson(PaymentForm::insert($value), 201);
+        return $response->withJson($pf, 201);
+    }catch(Exception $e){
+        throw new Exception("Error Processing Request: " . $e->getMessage(), 1);
+    }
+    
 });
  
 $app->put('/paymentForms/{id}', function(Request $request, Response $response) use ($app){
+    try{
+        $data = json_decode($request->getBody(), false);
+
+        $pf = PaymentForm::find($data->id);
+        $pf->descricao = $data->descricao;
+        $pf->sigla     = $data->numero;
+        $pf->usuario   = $data->usuario;
+
+        $pf->save();
+        return $response->withJson($pf, 201);
+    }catch(Exception $e){
+        throw new Exception("Error Processing Request: " . $e->getMessage(), 1);
+    }
     
-    $newResponse = $response->withHeader('Content-type', 'application/json')
-            ->withHeader('Access-Control-Allow-Origin', '*')
-            ->withHeader('Access-Control-Allow-Headers', 'X-Requested-With, Content-Type, Accept, Origin, Authorization')
-            ->withHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-
-    $value = json_decode($request->getBody(), false);
-
-    return $newResponse->withJson(PaymentForm::update($value), 201);
-
 });
 
 $app->delete('/paymentForms/{id}', function(Request $request, Response $response) use ($app){
-    
-    $newResponse = $response->withHeader('Content-type', 'application/json')
-            ->withHeader('Access-Control-Allow-Origin', '*')
-            ->withHeader('Access-Control-Allow-Headers', 'X-Requested-With, Content-Type, Accept, Origin, Authorization')
-            ->withHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-
-    return $newResponse->withJson(PaymentForm::delete($request->getAttribute('id')), 201);
-    
+    return $response->withJson(PaymentForm::destroy($request->getAttribute('id')), 201);
 });

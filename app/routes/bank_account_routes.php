@@ -15,11 +15,42 @@ $app->get('/bankAccounts/{id}', function(Request $request, Response $response) u
 });
  
 $app->post('/bankAccounts', function(Request $request, Response $response) use ($app){
-    return $response->withJson(BankAccount::updateOrCreate($request->getBody()), 201);
+	try{
+		$data = json_decode($request->getBody(), false);
+
+		$ba = new BankAccount();
+		$ba->descricao = $data->descricao;
+		$ba->numero    = $data->numero;
+		$ba->digito    = $data->digito;
+		$ba->situacao  = $data->situacao;
+		$ba->usuario   = $data->usuario;
+
+		$ba->save();
+
+	    return $response->withJson($ba, 201);
+	}catch(Exception $e){
+		throw new Exception("Error Processing Request: " . $e->getMessage(), 1);
+	}
+	
 });
  
 $app->put('/bankAccounts/{id}', function(Request $request, Response $response) use ($app){
-    return $response->withJson(BankAccount::updateOrCreate($$request->getBody()), 201);
+	try{
+		$data = json_decode($request->getBody(), false);
+
+		$ba = BankAccount::find($data->id);
+		$ba->descricao = $data->descricao;
+		$ba->numero    = $data->numero;
+		$ba->digito    = $data->digito;
+		$ba->situacao  = $data->situacao;
+		$ba->usuario   = $data->usuario;
+
+		$ba->save();
+		return $response->withJson($ba, 201);
+	}catch(Exception $e){
+		throw new Exception("Error Processing Request: " . $e->getMessage(), 1);
+	}
+    
 });
 
 $app->delete('/bankAccounts/{id}', function(Request $request, Response $response) use ($app){
