@@ -20,3 +20,5 @@ alter table contaBancaria add column updated_at datetime null;
 alter table contaBancaria add column created_at datetime null;
 
 alter table usuario add token varchar(255);
+
+alter table contaBancaria add column tipo varchar(255) not null default 'BANK';

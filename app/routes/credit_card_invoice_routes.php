@@ -48,7 +48,7 @@ $app->put('/creditCardInvoices/pay/{id}', function(Request $request, Response $r
 
         $in = CreditCardInvoice::find($data->id);
         $in->formaPagamento = isset($data->payment_form) ? $data->payment_form->id : null;
-        $in->valorPagamento = $data->valorPagamento;
+        $in->valorPagamento = isset($data->valorPagamento) ? $data->valorPagamento : null;
         $in->contaBancaria  = isset($data->bank_account) ? $data->bank_account->id : null;
         
         $in->pay();

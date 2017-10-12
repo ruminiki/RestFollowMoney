@@ -23,6 +23,7 @@ $app->post('/bankAccounts', function(Request $request, Response $response) use (
 		$ba->numero    = $data->numero;
 		$ba->digito    = $data->digito;
 		$ba->situacao  = $data->situacao;
+		$ba->tipo      = $data->tipo;
 		$ba->usuario   = $data->usuario;
 
 		$ba->save();
@@ -43,6 +44,7 @@ $app->put('/bankAccounts/{id}', function(Request $request, Response $response) u
 		$ba->numero    = $data->numero;
 		$ba->digito    = $data->digito;
 		$ba->situacao  = $data->situacao;
+		$ba->tipo      = $data->tipo;
 		$ba->usuario   = $data->usuario;
 
 		$ba->save();
