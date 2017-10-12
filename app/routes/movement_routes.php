@@ -70,10 +70,11 @@ $app->put('/movements/{id}', function(Request $request, Response $response) use 
     $movement->cartaoCredito = isset($data->credit_card) ? $data->credit_card->id : null;
     $movement->valor         = $data->valor;
     $movement->descricao     = $data->descricao;
+    $movement->status        = $data->status;
 
     $logger->addInfo('Movement Cartao Credito: ' . $movement->cartaoCredito );
 
-    $movement->validateUpdateDelete();
+    $movement->validateUpdateDelete('U');
 
     try {
         Movement::getConnectionResolver()->connection()->beginTransaction();
@@ -117,7 +118,7 @@ $app->delete('/movements/{id}', function(Request $request, Response $response) u
     
     $movement = Movement::find($request->getAttribute('id'));
 
-    $movement->validateUpdateDelete();
+    $movement->validateUpdateDelete('D');
 
     if ( $movement->isInOpenInvoice() ){
         $movementInvoice = MovementsInvoice::where('movimento', $movement->id)->first();
@@ -132,7 +133,7 @@ $app->delete('/movements/{id}', function(Request $request, Response $response) u
 
 //recupera os movimentos da fatura
 $app->get('/movements/invoice/{invoice}', function(Request $request, Response $response) use ($app){
-    $movements = CreditCardInvoice::find($request->getAttribute('invoice'))->movements;
+    $movements = CreditCardInvoice::find($request->getAttribute('invoice'))->movementsInvoice;
     return $movements->toJson();
 });
 
@@ -166,7 +167,7 @@ $app->get('/movements/previousBalance/bankAccount/{bankAccount}/period/{period}'
     $bank_account_id = $request->getAttribute('bankAccount');
     $period = $request->getAttribute('period');
 
-    $movements = Movement::whereRaw("usuario = ? and contaBancaria < ? and hashTransferencia = '' and fatura is null", [$user, $bank_account_id])->get();
+    $movements = Movement::whereRaw("contaBancaria = ? and SUBSTRING(vencimento, 1, 6) = ? and hashTransferencia = '' and fatura is null", [$bank_account_id, $period])->get();
     $credit = $movements->where('operacao', Movement::CREDIT)->sum('valor');
     $debit = $movements->where('operacao', Movement::DEBIT)->sum('valor');
 

@@ -2,7 +2,8 @@
 
 namespace Models;
 
-use Models\Movement as Movement;
+use \Models\Movement as Movement;
+use \Illuminate\Database\Capsule\Manager as DB;
 
 class CreditCardInvoice extends \Illuminate\Database\Eloquent\Model {
 
@@ -28,14 +29,14 @@ class CreditCardInvoice extends \Illuminate\Database\Eloquent\Model {
         return $this->belongsTo(\Models\CreditCard::class, 'cartaoCredito', 'id');
     }
 
-    public function movements(){
+    public function movementsInvoice(){
         return $this->belongsToMany(\Models\Movement::class, 'movimentosFatura', 'fatura', 'movimento')
                                   ->with(['bankAccount','creditCard','finality','invoice']);
     }
 
     //======================
 
-    public static function pay(){
+    public function pay(){
         global $logger;
         $logger->addInfo('CreditCardInvoice:Paying invoice: ' . $this->creditCard->descricao . ' ' . $this->mesReferencia);
         
@@ -47,11 +48,11 @@ class CreditCardInvoice extends \Illuminate\Database\Eloquent\Model {
         $movement->valor = $this->valorPagamento;
         $movement->status = Movement::STATUS_PAYD;
         $movement->operacao = Movement::DEBIT;
-        $movement->finality = new Finality(['id'=>549]);
-        $movement->bankAccount = $this->contaBancaria;
-        $movement->paymentForm = $this->formaPagamento;
+        $movement->finalidade = 549;
+        $movement->contaBancaria = $this->contaBancaria;
+        $movement->formaPagamento = $this->formaPagamento;
         $movement->usuario = $this->usuario;
-        $movement->fatura = $this;
+        $movement->fatura = $this->id;
 
         $logger->addInfo('CreditCardInvoice:adding movement payment...');  
         $movement->save();
@@ -59,25 +60,47 @@ class CreditCardInvoice extends \Illuminate\Database\Eloquent\Model {
         //atualiza movimentos da fatura para PAGO 
         $logger->addInfo('CreditCardInvoice:updating movements invoice to payd...');  
 
-        $this->movements->update(['status'=>Movement::STATUS_PAYD]);
+        DB::table('movimento')
+            ->join('movimentosFatura', 'movimentosFatura.movimento', '=', 'movimento.id')
+            ->where('movimentosFatura.fatura', $this->id)
+            ->update(['status'=>Movement::STATUS_PAYD]);
+/*
+        DB::table('movimento')->whereIn('id', function($query){
+            $query->select(DB::raw('movimentosFatura.movimento'))
+                  ->from('movimentosFatura')
+                  ->whereRaw('movimentosFatura.movimento = movimento.id');
+        })->update(['status'=>Movement::STATUS_PAYD]); */
 
         $this->status = CreditCardInvoice::CLOSED;
         $this->save();   
     }
 
-    public static function unpay(){
+    public function unpay(){
         global $logger;
         $logger->addInfo('CreditCardInvoice:Undone payment invoice: ' . $this->creditCard->descricao . ' ' . $this->mesReferencia);        
         
         $logger->addInfo('CreditCardInvoice: deleting movement of payment invoice where invoice equal ' . $this->id);
-        Movement::where('fatura', $this->id)->destroy();
+        Movement::where('fatura', $this->id)->delete();
         
         //atualiza movimentos para ABERTO    
         $logger->addInfo('CreditCardInvoice:updating movements invoice to open...');  
-        $this->movements->update(['status'=>Movement::STATUS_TO_PAY]); 
+
+        DB::table('movimento')
+            ->join('movimentosFatura', 'movimentosFatura.movimento', '=', 'movimento.id')
+            ->where('movimentosFatura.fatura', $this->id)
+            ->update(['status'=>Movement::STATUS_TO_PAY]);
+
+/*        DB::table('movimento')->whereIn('id', function($query){
+            $query->select(DB::raw('movimentosFatura.movimento'))
+                  ->from('movimentosFatura')
+                  ->whereRaw('movimentosFatura.movimento = movimento.id');
+        })->update(['status'=>Movement::STATUS_TO_PAY]); */
+        //$this->movementsInvoice()->update(['status'=>Movement::STATUS_TO_PAY]); 
 
         $logger->addInfo('CreditCardInvoice:set invoice open...');  
         $this->status = CreditCardInvoice::OPEN;
+        $this->valorPagamento = null;
+        $this->valor = null;
         $this->save();
     }
 

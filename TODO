@@ -4,23 +4,18 @@ TODO
 OK inclusão de movimento em fatura;
 OK alteração de movimento de fatura;
 OK retornar mensagens de exceção para interface;
-
 OK pagamento de fatura;
 OK estorno pagamento fatura;
 OK mostrar lançamento do pagamento da fatura na conta bancária;
-
 OK melhorar disposição botões na tela finalidade;
-
-OK na tela inicial exibir o saldo anterior e o saldo previsto
-
 OK setar a data de vencimento se selecionado o cartao de credito;
+OK status movimento (pago/aberto);
 
-- corrigir order by
+- na tela inicial exibir o saldo anterior e o saldo previsto
 
 - token authentication
 
 - transferência entre contas;
-- status movimento (pago/aberto);
 
 - na tela inicial listar as faturas do mês de todos os cartões;
 

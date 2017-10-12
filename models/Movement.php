@@ -8,6 +8,8 @@ use Exception;
 class Movement extends \Illuminate\Database\Eloquent\Model {  
 
     protected $table    = 'movimento';
+    //const UPDATED_AT    = "movimento.updated_at";
+
     const STATUS_PAYD   = 'PAGO';
     const STATUS_TO_PAY = 'A PAGAR';
     const DEBIT         = 'DEBITO';
@@ -30,10 +32,10 @@ class Movement extends \Illuminate\Database\Eloquent\Model {
     }
 
     public function movementsInvoice(){
-        return $this->belongsToMany(\Models\Movement::class, 'movimentosFatura', 'fatura', 'movimento');
+        return $this->belongsToMany(\Models\Movement::class, 'movimentosFatura', 'fatura', 'movimento')->withTimestamps();
     }
 
-    public function validateUpdateDelete(){
+    public function validateUpdateDelete($operation="U"){
 
         global $logger;
         $logger->addInfo('Validate update/delete movement...');
@@ -52,12 +54,17 @@ class Movement extends \Illuminate\Database\Eloquent\Model {
         $movementInvoice = MovementsInvoice::where('movimento', $movementOld->id)->first();
 
         if ( $this->isInClosedInvoice() ){
+            if ( $operation == "D" ){
+                $logger->addInfo('Movement validate: tentativa de remover um movimento em fatura fechada.' );
+                throw new Exception('O movimento selecionado está relacionado a uma fatura FECHADA. É necessário primeiro reabrir a fatura para poder remover o movimento.');
+            }
             if ( ($movementOld->creditCard->id != $this->creditCard->id) ||
                  ($movementOld->operacao != $this->operacao) ||
+                 ($movementOld->status != $this->status) ||
                  ($movementOld->vencimento != $this->vencimento) ){
     
-                $logger->addInfo('Movement validate update/delete: tentativa de alterar o cc/vencimento/operacao de um movimento em fatura fechada.' );
-                throw new Exception('O movimento selecionado está relacionado a uma fatura FECHADA. É necessário primeiro reabrir a fatura para alterar/remover o movimento.');
+                $logger->addInfo('Movement validate: tentativa de alterar o cc/vencimento/status/operacao de um movimento em fatura fechada.' );
+                throw new Exception('O movimento selecionado está relacionado a uma fatura FECHADA. É necessário primeiro reabrir a fatura para alterar o movimento.');
             }
         }
     }
