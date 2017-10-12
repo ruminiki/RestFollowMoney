@@ -6,7 +6,8 @@ use \Psr\Http\Message\ServerRequestInterface as Request;
 use \Psr\Http\Message\ResponseInterface as Response;
 
 $app->get('/creditCardInvoices/creditCard/{creditCard}', function(Request $request, Response $response) use ($app){
-    $invoices = CreditCardInvoice::where('cartaoCredito', $request->getAttribute('creditCard'))->with('creditCard')->get();
+    $invoices = CreditCardInvoice::where('cartaoCredito', $request->getAttribute('creditCard'))
+                                 ->with('creditCard')->orderBy('vencimento', 'desc')->get();
     return $invoices->toJson();
 });
 
@@ -17,7 +18,8 @@ $app->get('/creditCardInvoices/{id}', function(Request $request, Response $respo
 
 $app->get('/creditCardInvoices/period/{period}', function(Request $request, Response $response) use ($app){
     $mesReferencia = DateUtil::mesReferenciaFromDateString($request->getAttribute('period').'01');
-    $invoices = CreditCardInvoice::where('mesReferencia', $mesReferencia)->with('creditCard')->get();
+    $invoices = CreditCardInvoice::where('mesReferencia', $mesReferencia)->with('creditCard')
+                                ->orderBy('vencimento', 'desc')->get();
     return $invoices->toJson();
 });
 
@@ -45,13 +47,3 @@ $app->put('/creditCardInvoices/unpay/{id}', function(Request $request, Response 
 });
 
  
-
-
-
-
-
-
-
-
-
-   

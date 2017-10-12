@@ -20,7 +20,7 @@ $config = [
             'host' => 'localhost',
             'database' => 'fmdb',
             'username' => 'root',
-            'password' => 'dust258',
+            'password' => '',
             'charset'   => 'latin1',
             'collation' => 'latin1_swedish_ci',
             'prefix'    => '',
@@ -55,7 +55,7 @@ $logger->pushHandler(new FirePHPHandler());*/
 
 
 //==========ERROR HANDLING==============
-
+use \Illuminate\Database\Capsule\Manager as DB;
 $c = $app->getContainer();
 
 $c['phpErrorHandler'] = function ($c) {
@@ -81,7 +81,7 @@ $c['errorHandler'] = function ($c) {
     	global $logger;
     	$logger->addWarning($exception->getMessage());
     	//$logger->addInfo('Rollback transaction...');
-    	//DB::rollback();
+    	DB::rollback();
 
 	    $newResponse = $response->withHeader('Content-type', 'application/json')
         ->withHeader('Content-Type', 'charset=unicode')

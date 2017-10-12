@@ -6,7 +6,7 @@ use \Psr\Http\Message\ServerRequestInterface as Request;
 use \Psr\Http\Message\ResponseInterface as Response;
 
 $app->get('/finalities/user/{user}', function (Request $request, Response $response) use ($app){
-    $finalities = Finality::where('usuario', $request->getAttribute('user'))->get();
+    $finalities = Finality::where('usuario', $request->getAttribute('user'))->orderBy('descricao')->get();
     return $finalities->toJson();
 });
 
@@ -21,7 +21,7 @@ $app->get('/finalities/user/{user}/fill/{letters}', function (Request $request, 
         $letters = $request->getAttribute('letters');
         $finalities = DB::select(DB::raw("SELECT * FROM finalidade 
                                           WHERE usuario = $user 
-                                          AND descricao RLIKE '^[$letters]'"));
+                                          AND descricao RLIKE '^[$letters]' ORDER BY descricao"));
         return $response->withJson($finalities, 201);
     }catch(Exception $e){
         throw new Exception("Error Processing Request: " . $e->getMessage(), 1);

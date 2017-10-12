@@ -13,7 +13,12 @@ OK melhorar disposição botões na tela finalidade;
 
 OK na tela inicial exibir o saldo anterior e o saldo previsto
 
-- setar a data de vencimento se selecionado o cartao de credito;
+OK setar a data de vencimento se selecionado o cartao de credito;
+
+- corrigir order by
+
+- token authentication
+
 - transferência entre contas;
 - status movimento (pago/aberto);
 

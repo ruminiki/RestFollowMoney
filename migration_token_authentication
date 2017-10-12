@@ -1,3 +1,9 @@
+alter table movimento add column updated_at datetime null;
+alter table movimento add column created_at datetime null;
+
+alter table movimentosFatura add column updated_at datetime null;
+alter table movimentosFatura add column created_at datetime null;
+
 alter table fatura add column updated_at datetime null;
 alter table fatura add column created_at datetime null;
 

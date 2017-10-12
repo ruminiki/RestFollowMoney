@@ -5,7 +5,7 @@ use \Psr\Http\Message\ServerRequestInterface as Request;
 use \Psr\Http\Message\ResponseInterface as Response;
 
 $app->get('/creditCards/user/{user}', function (Request $request, Response $response) use ($app){
-    $creditCards = CreditCard::where('usuario', $request->getAttribute('user'))->get();
+    $creditCards = CreditCard::where('usuario', $request->getAttribute('user'))->orderBy('descricao')->get();
     return $creditCards->toJson();
 });
 

@@ -5,7 +5,7 @@ use \Psr\Http\Message\ServerRequestInterface as Request;
 use \Psr\Http\Message\ResponseInterface as Response;
 
 $app->get('/paymentForms/user/{user}', function (Request $request, Response $response) use ($app){
-    $paymentForms = PaymentForm::where('usuario', $request->getAttribute('user'))->get();
+    $paymentForms = PaymentForm::where('usuario', $request->getAttribute('user'))->orderBy('descricao')->get();
     return $paymentForms->toJson();
 });
 

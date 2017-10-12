@@ -2,6 +2,7 @@
 
 use \Models\Movement as Movement;
 use \Models\CreditCardInvoice as CreditCardInvoice;
+use \Models\MovementsInvoice as MovementsInvoice;
 
 use \Psr\Http\Message\ServerRequestInterface as Request;
 use \Psr\Http\Message\ResponseInterface as Response;
@@ -13,6 +14,9 @@ $app->get('/movements/user/{user}/period/{period}', function (Request $request, 
                          ->with('creditCard')
                          ->with('finality')
                          ->with('invoice')
+                         ->orderBy('vencimento', 'desc')
+                         ->orderBy('emissao')
+                         ->orderBy('descricao')
                          ->get();
     return $movements->toJson();
 });
@@ -24,7 +28,10 @@ $app->get('/movements/{id}', function(Request $request, Response $response) use 
                  ->with('creditCard')
                  ->with('finality')
                  ->with('invoice')
-                 ->get();
+                 ->orderBy('vencimento', 'desc')
+                 ->orderBy('emissao')
+                 ->orderBy('descricao')
+                 ->first();
                  
     return $movement->toJson();
 });
@@ -54,37 +61,55 @@ $app->put('/movements/{id}', function(Request $request, Response $response) use 
     global $logger;
 
     $data = json_decode($request->getBody(), false);
-    $keys = array_keys($data);
 
     $movement = Movement::find($data->id);
-    
-    foreach ($dados as $key => $value) {
-        if ( is_array($value) ){
-            $value = $value['id'];
-        }
-        $movement[$key] = $value;
-    }
+    $movement->emissao       = $data->emissao;
+    $movement->vencimento    = $data->vencimento;
+    $movement->finalidade    = isset($data->finality) ? $data->finality->id : null;
+    $movement->contaBancaria = isset($data->bank_account) ? $data->bank_account->id : null;
+    $movement->cartaoCredito = isset($data->credit_card) ? $data->credit_card->id : null;
+    $movement->valor         = $data->valor;
+    $movement->descricao     = $data->descricao;
+
+    $logger->addInfo('Movement Cartao Credito: ' . $movement->cartaoCredito );
 
     $movement->validateUpdateDelete();
 
-    if ( $movement->isInOpenInvoice() ){
-        if ( ($movementOld->creditCard->id != $this->creditCard->id) ||
-             ($movementOld->vencimento != $this->vencimento) ){
-            $logger->addInfo('Movement Update: removendo movimento da fatura anterior.' );
-            $movementInvoice = MovementsInvoice::where('movimento', $this->id)->first();
-            $movementInvoice->destroy();
-            //adiciona a nova invoice
-            $movement->addToInvoice();
+    try {
+        Movement::getConnectionResolver()->connection()->beginTransaction();
+
+        if ( $movement->isInOpenInvoice() ){
+            $movementOld = Movement::find($data->id);
+            if ( ($movementOld->cartaoCredito != $movement->cartaoCredito) ||
+                 ($movementOld->vencimento != $movement->vencimento) ){
+
+                $logger->addInfo('Movement Update: removendo movimento da fatura anterior.' );
+                $movementInvoice = MovementsInvoice::where('movimento', $movement->id)->first();
+                $logger->addInfo($movementInvoice->fatura . ' ' . $movementInvoice->movimento);
+                $movementInvoice->where('movimento', $movement->id)->delete();
+                //adiciona a nova invoice
+                $logger->addInfo('Movement Update: adicionando movimento a nova fatura.' );
+                $movement->addToInvoice();
+
+            }
+        }else{
+            if ( $movement->cartaoCredito > 0 ){
+                $movement->addToInvoice();
+            }
         }
-    }else{
-        if ( $movement->creditCard != null && $movement->creditCard->id > 0 ){
-            $movement->addToInvoice();
-        }
+
+        $logger->addInfo('Movement Update: saving movement.' );
+        $movement->save();
+
+        Movement::getConnectionResolver()->connection()->commit();
+
+        return $movement->toJson();
+
     }
-
-    $movement->update($data);
-
-    return $movement->toJson();
+    catch(Exception $e) {
+        throw new Exception("Error Processing Request: " . $e->getMessage(), 1);
+    }
+    
 
 });
 
@@ -96,10 +121,10 @@ $app->delete('/movements/{id}', function(Request $request, Response $response) u
 
     if ( $movement->isInOpenInvoice() ){
         $movementInvoice = MovementsInvoice::where('movimento', $movement->id)->first();
-        $movementInvoice->destroy();
+        $movementInvoice->where('movimento', $movimento->id)->delete();
     }
         
-    $movement->destroy();
+    $movement->delete();
 
     return $movement->toJson();
     

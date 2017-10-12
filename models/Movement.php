@@ -3,6 +3,7 @@
 namespace Models;  
 use \Models\CreditCardInvoice as CreditCardInvoice;
 use \App\Util\DateUtil as DateUtil;
+use Exception;
 
 class Movement extends \Illuminate\Database\Eloquent\Model {  
 
@@ -28,8 +29,14 @@ class Movement extends \Illuminate\Database\Eloquent\Model {
         return $this->belongsTo(\Models\CreditCardInvoice::class, 'fatura', 'id');
     }
 
-   
+    public function movementsInvoice(){
+        return $this->belongsToMany(\Models\Movement::class, 'movimentosFatura', 'fatura', 'movimento');
+    }
+
     public function validateUpdateDelete(){
+
+        global $logger;
+        $logger->addInfo('Validate update/delete movement...');
 
         if ( $this->invoice != null && $this->invoice->id > 0 ){
             $logger->addInfo('\n Movement validate update/delete: isInvoicePayment.' );
@@ -84,20 +91,22 @@ class Movement extends \Illuminate\Database\Eloquent\Model {
     }
 
     public function addToInvoice(){
+        global $logger;
+
         $mesReferencia = DateUtil::mesReferenciaFromDateString($this->vencimento);
-        $invoice = CreditCardInvoice::whereRaw('cartaoCredito = ? and mesReferencia = ?', [$this->creditCard->id, $mesReferencia])->first();
+        $invoice = CreditCardInvoice::whereRaw('cartaoCredito = ? and mesReferencia = ?', [$this->cartaoCredito, $mesReferencia])->first();
 
         if ( $invoice == null ){
-            $emissao = date_format(now(), 'Ymd');
+            $emissao = date('Ymd');
             if ( DateUtil::getMonth($this->vencimento) == '01' ){
                 $ano = (intval(DateUtil::getYear($this->vencimento)) + 1);
                 $mes = DateUtil::getMonth($this->vencimento);
-                $dia = $this->creditCard->dataFechamento;
+                $dia = CreditCard::find($this->cartaoCredito)->dataFechamento;
                 $emissao = $ano.$mes.$dia;
             }else{ 
                 $ano = DateUtil::getYear($this->vencimento);
                 $mes = DateUtil::getMesProximo(DateUtil::getMonth($this->vencimento));
-                $dia = $this->creditCard->dataFechamento;
+                $dia = CreditCard::find($this->cartaoCredito)->dataFechamento;
                 $emissao = $ano.$mes.$dia;
             }
 
@@ -105,16 +114,20 @@ class Movement extends \Illuminate\Database\Eloquent\Model {
             $invoice->emissao       = $emissao;
             $invoice->vencimento    = $this->vencimento;
             $invoice->mesReferencia = $mesReferencia;
-            $invoice->creditCard    = $this->creditCard;
+            $invoice->cartaoCredito = $this->cartaoCredito;
             $invoice->usuario       = $this->usuario;
 
+            $logger->addInfo('Movement:adding new invoice: ' . $this->creditCard->descricao . ' ' . $mesReferencia);
             $invoice->save();
         }
 
         $movementInvoice = new MovementsInvoice();
-        $movementInvoice->fatura = $invoice->id;
+        $movementInvoice->fatura    = $invoice->id;
         $movementInvoice->movimento = $this->id;
-        $movementInvoice->save();
+
+        $logger->addInfo('Movement:adding movement to invoice: Movement: ' . $this->id . ' Invoice: ' . $invoice->id);
+        $this->movementsInvoice()->save($movementInvoice);
+                
     }
 
 }
