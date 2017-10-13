@@ -10,9 +10,14 @@ OK mostrar lançamento do pagamento da fatura na conta bancária;
 OK melhorar disposição botões na tela finalidade;
 OK setar a data de vencimento se selecionado o cartao de credito;
 OK status movimento (pago/aberto);
+OK na tela inicial exibir o saldo anterior e o saldo previsto
+OK token authentication
+OK melhorar botões forma pagamento tela movimento
+OK corrigir saldo conta bancária
 
-- na tela inicial exibir o saldo anterior e o saldo previsto
-- token authentication
+- listagem de conta bancária (carteira ou banco / ativo ou inativo)
+- ao selecionar dinheiro na tela de movimento, só listar contas carteiras
+- navegação meses tela inicial
 
 - transferência entre contas;
 

@@ -126,6 +126,10 @@ class Movement extends \Illuminate\Database\Eloquent\Model {
 
             $logger->addInfo('Movement:adding new invoice: ' . $this->creditCard->descricao . ' ' . $mesReferencia);
             $invoice->save();
+        }else{
+            if ( $invoice->isClosed() ){
+                throw new Exception('A fatura para o período ' . $mesReferencia . ' já está fechada. Para fazer novo lançamento no período é necessário reabri-lá.');
+            }
         }
 
         $movementInvoice = new MovementsInvoice();
