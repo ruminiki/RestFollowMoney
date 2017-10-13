@@ -19,6 +19,8 @@ alter table cartaoCredito add column created_at datetime null;
 alter table contaBancaria add column updated_at datetime null;
 alter table contaBancaria add column created_at datetime null;
 
+
+update usuario set token = '7be2531ea6205505f6bd851d9c1f8199e83eafda' where id = 3;
 alter table usuario add token varchar(255);
 
 alter table contaBancaria add column tipo varchar(255) not null default 'BANK';

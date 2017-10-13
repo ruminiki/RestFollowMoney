@@ -15,9 +15,10 @@ $app->get('/movements/user/{user}/period/{period}', function (Request $request, 
                          ->with('finality')
                          ->with('invoice')
                          ->orderBy('vencimento', 'desc')
-                         ->orderBy('emissao')
+                         ->orderBy('emissao', 'desc')
                          ->orderBy('descricao')
                          ->get();
+
     return $movements->toJson();
 });
 
@@ -38,23 +39,45 @@ $app->get('/movements/{id}', function(Request $request, Response $response) use 
  
 $app->post('/movements', function(Request $request, Response $response) use ($app){
 
-    $data = json_decode($request->getBody(), true);
-    $keys = array_keys($data);
+    global $logger;
+
+    $data = json_decode($request->getBody(), false);
 
     $movement = new Movement();
-    foreach ($dados as $key => $value) {
-        if ( is_array($value) ){
-            $value = $value['id'];
+    $movement->emissao       = $data->emissao;
+    $movement->vencimento    = $data->vencimento;
+    $movement->finalidade    = isset($data->finality) ? $data->finality->id : null;
+    $movement->contaBancaria = isset($data->bank_account) ? $data->bank_account->id : null;
+    $movement->cartaoCredito = isset($data->credit_card) ? $data->credit_card->id : null;
+    $movement->valor         = $data->valor;
+    $movement->descricao     = $data->descricao;
+    $movement->status        = $data->status;
+    $movement->operacao      = $data->operacao;
+    $movement->usuario       = $data->usuario;
+
+
+    try {
+
+        Movement::getConnectionResolver()->connection()->beginTransaction();
+        
+        $movement->save();
+
+        if ( $movement->creditCard != null && $movement->creditCard->id > 0 ){
+            $movement->addToInvoice();
         }
-        $movement[$key] = $value;
-    }
-    $movement->save();
 
-    if ( $movement->creditCard != null && $movement->creditCard->id > 0 ){
-        $movement->addToInvoice();
+        $logger->addInfo('Movement Save: saving movement.' );
+        $movement->save();
+
+        Movement::getConnectionResolver()->connection()->commit();
+
+        return $movement->toJson();
+
+    }
+    catch(Exception $e) {
+        throw new Exception("Error Processing Request: " . $e->getMessage(), 1);
     }
 
-    return $movement->toJson();
 });
  
 $app->put('/movements/{id}', function(Request $request, Response $response) use ($app){
@@ -143,7 +166,10 @@ $app->get('/movements/bankAccount/{bankAccount}/period/{period}', function(Reque
     $bank_account_id = $request->getAttribute('bankAccount');
     $period = $request->getAttribute('period');
     $movements = Movement::whereRaw("contaBancaria = ? and SUBSTRING(vencimento, 1, 6) = ?", [$bank_account_id, $period])
-                         ->with(['bankAccount','creditCard','finality','invoice'])->get();
+                         ->with(['bankAccount','creditCard','finality','invoice'])
+                         ->orderBy('vencimento', 'desc')
+                         ->orderBy('emissao', 'desc')
+                         ->orderBy('descricao')->get();
     return $movements->toJson();
 
 });

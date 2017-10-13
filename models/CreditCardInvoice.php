@@ -31,7 +31,9 @@ class CreditCardInvoice extends \Illuminate\Database\Eloquent\Model {
 
     public function movementsInvoice(){
         return $this->belongsToMany(\Models\Movement::class, 'movimentosFatura', 'fatura', 'movimento')
-                                  ->with(['bankAccount','creditCard','finality','invoice']);
+                                  ->with(['bankAccount','creditCard','finality','invoice'])
+                                  ->orderBy('movimento.emissao', 'desc')
+                                  ->orderBy('movimento.descricao');
     }
 
     //======================
@@ -64,12 +66,6 @@ class CreditCardInvoice extends \Illuminate\Database\Eloquent\Model {
             ->join('movimentosFatura', 'movimentosFatura.movimento', '=', 'movimento.id')
             ->where('movimentosFatura.fatura', $this->id)
             ->update(['status'=>Movement::STATUS_PAYD]);
-/*
-        DB::table('movimento')->whereIn('id', function($query){
-            $query->select(DB::raw('movimentosFatura.movimento'))
-                  ->from('movimentosFatura')
-                  ->whereRaw('movimentosFatura.movimento = movimento.id');
-        })->update(['status'=>Movement::STATUS_PAYD]); */
 
         $this->status = CreditCardInvoice::CLOSED;
         $this->save();   
@@ -89,13 +85,6 @@ class CreditCardInvoice extends \Illuminate\Database\Eloquent\Model {
             ->join('movimentosFatura', 'movimentosFatura.movimento', '=', 'movimento.id')
             ->where('movimentosFatura.fatura', $this->id)
             ->update(['status'=>Movement::STATUS_TO_PAY]);
-
-/*        DB::table('movimento')->whereIn('id', function($query){
-            $query->select(DB::raw('movimentosFatura.movimento'))
-                  ->from('movimentosFatura')
-                  ->whereRaw('movimentosFatura.movimento = movimento.id');
-        })->update(['status'=>Movement::STATUS_TO_PAY]); */
-        //$this->movementsInvoice()->update(['status'=>Movement::STATUS_TO_PAY]); 
 
         $logger->addInfo('CreditCardInvoice:set invoice open...');  
         $this->status = CreditCardInvoice::OPEN;

@@ -105,25 +105,45 @@ require_once "app/routes/movement_routes.php";
 
 
 //==========TOKEN AUTHENTICATION=============
-/*
-use Slim\Middleware\TokenAuthentication;
-use Models\User as User;
-$authenticator = function($request, TokenAuthentication $tokenAuth){
-    # Search for token on header, parameter, cookie or attribute
-    $token = $tokenAuth->findToken($request);
-    $logger->addInfo('Authentication:token ' . $token);
-    # Your method to make token validation
-    $user = User::where('token', $token);
-    $logger->addInfo('Authentication:user ' . $user->nome);
-    # If occured ok authentication continue to route
-    # before end you can storage the user informations or whatever
-};*/
 
-/*$app->add(new TokenAuthentication([
+use \Slim\Middleware\TokenAuthentication;
+use \Models\User as User;
+use \App\Auth\TokenAuth as TokenAuth;
+
+$authenticator = function($request, TokenAuthentication $tokenAuth){
+    global $logger;
+    # Search for token on header, parameter, cookie or attribute
+    $headers = $request->getHeaders();
+    $token = null;
+    foreach ($headers as $name => $values) {
+
+        if ( $name == 'HTTP_AUTHORIZATION' ){
+            $token = implode(", ", $values);
+            break;
+        }
+
+    }
+
+    if ( isset($token) ){
+        //$token = $tokenAuth->findToken($request);
+        # Your method to make token validation
+        $user = User::where('token', $token)->first();
+        if ( $user === null ){
+            throw new Exception("Error Processing Request: Authentication is required!", 1);        
+        }
+        $logger->addInfo('Authentication:token ok!');
+    }else{
+        throw new Exception("Error Processing Request: Token not found.", 1);
+    }
+
+};
+
+$app->add(new TokenAuthentication([
     'secure' => false,
     'path' => '/',
     'authenticator' => $authenticator
-]));*/
+]));
+
 
 //==========================================
 
