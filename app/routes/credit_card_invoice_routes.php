@@ -29,6 +29,18 @@ $app->get('/creditCardInvoices/creditCard/{creditCard}', function(Request $reque
 
 $app->get('/creditCardInvoices/{id}', function(Request $request, Response $response) use ($app){
     $invoice = CreditCardInvoice::with('creditCard')->find($request->getAttribute('id'));
+
+    $movements = DB::table('movimento')
+        ->join('movimentosFatura', 'movimentosFatura.movimento', '=', 'movimento.id')
+        ->where('movimentosFatura.fatura', $invoice->id)
+        ->select('movimento.operacao', 'movimento.valor')
+        ->get();
+
+    $credit = $movements->where('operacao', Movement::CREDIT)->sum('valor');
+    $debit = $movements->where('operacao', Movement::DEBIT)->sum('valor');
+
+    $invoice->valor = $debit - $credit;
+
     return $invoice->toJson();
 });
 
