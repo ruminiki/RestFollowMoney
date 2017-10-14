@@ -141,6 +141,25 @@ class Movement extends \Illuminate\Database\Eloquent\Model {
                 
     }
 
+    public function prepareTransfer($accountTransfer, $codeTransfer, $operation){
+        $this->emissao           = $accountTransfer->data;
+        $this->vencimento        = $accountTransfer->data;
+        $this->finalidade        = $accountTransfer->finalidade->id;
+        $this->valor             = $accountTransfer->valor;
+        if ( $operation == Movement::CREDIT ){
+            $this->operacao          = Movement::CREDIT;
+            $this->contaBancaria     = $accountTransfer->contaBancariaDestino->id;
+            $this->descricao         = 'TRANSFERÊNCIA DE: ' . $accountTransfer->contaBancariaOrigem->descricao;    
+        }else{
+            $this->operacao          = Movement::DEBIT;
+            $this->contaBancaria     = $accountTransfer->contaBancariaOrigem->id;
+            $this->descricao         = 'TRANSFERÊNCIA PARA: ' . $accountTransfer->contaBancariaDestino->descricao;    
+        }
+        $this->status            = Movement::STATUS_PAYD;
+        $this->hashTransferencia = $codeTransfer;
+        $this->usuario           = $accountTransfer->usuario;
+    }
+
 }
 
 ?>

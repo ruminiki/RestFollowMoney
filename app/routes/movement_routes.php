@@ -201,3 +201,36 @@ $app->get('/movements/previousBalance/bankAccount/{bankAccount}/period/{period}'
 
 });
 
+$app->post('/movements/accountTransfer', function(Request $request, Response $response) use ($app){
+
+    global $logger;
+
+    $data = json_decode($request->getBody(), false);
+    $codeTransfer = md5(date('Ymd H:i:s:u'));
+
+    $logger->addInfo('Origem> ' . $data->contaBancariaDestino->descricao);
+
+    try {
+
+        Movement::getConnectionResolver()->connection()->beginTransaction();
+        
+        $logger->addInfo('Movement transfer: Saving debit...' );
+        $debit = new Movement();
+        $debit->prepareTransfer($data, $codeTransfer, Movement::DEBIT);
+        $debit->save();
+        
+        $logger->addInfo('Movement transfer: Saving credit...' );
+        $credit = new Movement();
+        $credit->prepareTransfer($data, $codeTransfer, Movement::CREDIT);
+        $credit->save();
+
+        Movement::getConnectionResolver()->connection()->commit();
+
+        return $response->withJson($data);
+
+    }
+    catch(Exception $e) {
+        throw new Exception("Error Processing Request: " . $e->getMessage(), 1);
+    }
+
+});
