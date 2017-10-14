@@ -193,7 +193,7 @@ $app->get('/movements/previousBalance/bankAccount/{bankAccount}/period/{period}'
     $bank_account_id = $request->getAttribute('bankAccount');
     $period = $request->getAttribute('period');
 
-    $movements = Movement::whereRaw("contaBancaria = ? and SUBSTRING(vencimento, 1, 6) < ? and fatura is null", [$bank_account_id, $period])->get();
+    $movements = Movement::whereRaw("contaBancaria = ? and SUBSTRING(vencimento, 1, 6) < ?", [$bank_account_id, $period])->get();
     $credit = $movements->where('operacao', Movement::CREDIT)->sum('valor');
     $debit = $movements->where('operacao', Movement::DEBIT)->sum('valor');
 
