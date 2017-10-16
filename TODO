@@ -14,12 +14,14 @@ OK na tela inicial exibir o saldo anterior e o saldo previsto
 OK token authentication
 OK melhorar botões forma pagamento tela movimento
 OK corrigir saldo conta bancária
+OK listagem de conta bancária (carteira ou banco / ativo ou inativo)
+OK navegação meses tela inicial
+OK transferência entre contas;
 
-- listagem de conta bancária (carteira ou banco / ativo ou inativo)
+
+
 - ao selecionar dinheiro na tela de movimento, só listar contas carteiras
-- navegação meses tela inicial
 
-- transferência entre contas;
 
 - na tela inicial listar as faturas do mês de todos os cartões;
 

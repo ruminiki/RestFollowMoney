@@ -45,9 +45,11 @@ class Movement extends \Illuminate\Database\Eloquent\Model {
             throw new Exception("O movimento não pode ser alterado/removido pois se trata do pagamento de fatura de cartão de crédito. Caso deseje, cancele o pagamento da fatura para que o movimento seja removido.");
         }
 
-        if ( !empty($this->hashTransferencia) ){
-            $logger->addInfo('\n Movement validate update/delete: movimento é uma transfência bancária.' );
-            throw new Exception("O movimento é uma transferência bancária e não pode ser alterado/removido. Tente extornar o lançamento.");
+        if ( $operation == "U" ){
+            if ( !empty($this->hashTransferencia) ){
+                $logger->addInfo('\n Movement validate update/delete: movimento é uma transfência bancária.' );
+                throw new Exception("O movimento é uma transferência bancária e não pode ser alterado. Tente extornar o lançamento.");
+            }
         }
 
         $movementOld = Movement::find($this->id);

@@ -147,6 +147,10 @@ $app->delete('/movements/{id}', function(Request $request, Response $response) u
         $movementInvoice = MovementsInvoice::where('movimento', $movement->id)->first();
         $movementInvoice->where('movimento', $movimento->id)->delete();
     }
+
+    if ( !empty($movement->hashTransferencia) ){
+        Movement::where('hashTransferencia', $movement->hashTransferencia)->delete();
+    }
         
     $movement->delete();
 
