@@ -138,7 +138,7 @@ $app->put('/movements/{id}', function(Request $request, Response $response) use 
 });
 
 $app->delete('/movements/{id}', function(Request $request, Response $response) use ($app){
-    
+    global $logger; 
     $movement = Movement::find($request->getAttribute('id'));
 
     $movement->validateUpdateDelete('D');
@@ -149,6 +149,7 @@ $app->delete('/movements/{id}', function(Request $request, Response $response) u
     }
 
     if ( !empty($movement->hashTransferencia) ){
+	$logger->addInfo('Transferência: ' . $movement->hashTransferencia);
         Movement::where('hashTransferencia', $movement->hashTransferencia)->delete();
     }
         
