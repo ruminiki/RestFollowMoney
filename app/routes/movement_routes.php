@@ -4,8 +4,6 @@ use \Models\Movement as Movement;
 use \Models\CreditCardInvoice as CreditCardInvoice;
 use \Models\MovementsInvoice as MovementsInvoice;
 use \Illuminate\Database\Capsule\Manager as DB;
-
-
 use \Psr\Http\Message\ServerRequestInterface as Request;
 use \Psr\Http\Message\ResponseInterface as Response;
 
@@ -140,7 +138,7 @@ $app->put('/movements/{id}', function(Request $request, Response $response) use 
 });
 
 $app->delete('/movements/{id}', function(Request $request, Response $response) use ($app){
-    
+    global $logger; 
     $movement = Movement::find($request->getAttribute('id'));
 
     $movement->validateUpdateDelete('D');
@@ -151,6 +149,7 @@ $app->delete('/movements/{id}', function(Request $request, Response $response) u
     }
 
     if ( !empty($movement->hashTransferencia) ){
+	$logger->addInfo('Transferência: ' . $movement->hashTransferencia);
         Movement::where('hashTransferencia', $movement->hashTransferencia)->delete();
     }
         
