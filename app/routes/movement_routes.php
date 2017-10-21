@@ -213,7 +213,8 @@ $app->post('/movements/accountTransfer', function(Request $request, Response $re
     $data = json_decode($request->getBody(), false);
     $codeTransfer = md5(date('Ymd H:i:s:u'));
 
-    $logger->addInfo('Origem> ' . $data->contaBancariaDestino->descricao);
+    $logger->addInfo('Origem> ' . $data->contaBancariaOrigem->descricao);
+    $logger->addInfo('Destino> ' . $data->contaBancariaDestino->descricao);
 
     try {
 
