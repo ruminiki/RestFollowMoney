@@ -3,6 +3,8 @@
 use \Models\Movement as Movement;
 use \Models\CreditCardInvoice as CreditCardInvoice;
 use \Models\MovementsInvoice as MovementsInvoice;
+use \Illuminate\Database\Capsule\Manager as DB;
+
 
 use \Psr\Http\Message\ServerRequestInterface as Request;
 use \Psr\Http\Message\ResponseInterface as Response;
@@ -205,6 +207,7 @@ $app->get('/movements/previousBalance/bankAccount/{bankAccount}/period/{period}'
 
 });
 
+//bank account transfers
 $app->post('/movements/accountTransfer', function(Request $request, Response $response) use ($app){
 
     global $logger;
@@ -236,5 +239,39 @@ $app->post('/movements/accountTransfer', function(Request $request, Response $re
     catch(Exception $e) {
         throw new Exception("Error Processing Request: " . $e->getMessage(), 1);
     }
+
+});
+
+//chart finalities spending
+$app->get('/movements/finalitiesChart/user/{user}/period/{period}', function(Request $request, Response $response) use ($app){
+
+    global $logger;
+
+    $logger->addInfo('Movement finality chart: getting data to chart...' );
+
+    $usuario  = $request->getAttribute('user');
+    $periodo  = $request->getAttribute('period');
+    $operacao = Movement::DEBIT;
+
+    $sql = "select 
+                sum(valor) as value, 
+                ((sum(valor) / 
+
+                (select 
+                    sum(valor) 
+                from movimento 
+                where usuario = $usuario and SUBSTRING(vencimento, 1, 6) = $periodo and operacao = '$operacao'
+                and hashTransferencia = '' and fatura is null)
+
+                ) * 100) as percent, 
+                f.descricao as label
+            from movimento m 
+            inner join finalidade f on f.id = m.finalidade 
+            where m.usuario = $usuario and SUBSTRING(m.vencimento, 1, 6) = $periodo and m.operacao = '$operacao' 
+            and hashTransferencia = '' and fatura is null group by f.descricao order by 1 desc limit 10";
+
+    $resume = DB::select($sql);
+
+    return $response->withJson($resume);
 
 });
