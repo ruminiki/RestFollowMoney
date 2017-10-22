@@ -267,7 +267,7 @@ $app->get('/movements/finalitiesChart/user/{user}/period/{period}', function(Req
             from movimento m 
             inner join finalidade f on f.id = m.finalidade 
             where m.usuario = $usuario and SUBSTRING(m.vencimento, 1, 6) = $periodo and m.operacao = '$operacao' 
-            and hashTransferencia = '' and fatura is null group by f.descricao order by 1 desc limit 10";
+            and hashTransferencia = '' and fatura is null group by f.descricao order by 1 asc";
 
     $resume = DB::select($sql);
 
