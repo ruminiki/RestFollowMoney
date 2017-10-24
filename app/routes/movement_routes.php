@@ -193,6 +193,7 @@ $app->get('/movements/previousBalance/user/{user}/period/{period}', function(Req
 
 });
 
+//saldo previsto
 $app->get('/movements/previousBalance/bankAccount/{bankAccount}/period/{period}', function(Request $request, Response $response) use ($app){
 
     $bank_account_id = $request->getAttribute('bankAccount');
@@ -203,6 +204,45 @@ $app->get('/movements/previousBalance/bankAccount/{bankAccount}/period/{period}'
     $debit = $movements->where('operacao', Movement::DEBIT)->sum('valor');
 
     return $response->withJson($credit - $debit);
+
+});
+
+//saldo
+$app->get('/movements/balance/user/{user}/period/{period}', function(Request $request, Response $response) use ($app){
+
+    $user   = $request->getAttribute('user');
+    $period = $request->getAttribute('period');
+
+    //all movements before actual period
+    $movements = Movement::whereRaw("usuario = ? and 
+                                     SUBSTRING(vencimento, 1, 6) < ? and 
+                                     hashTransferencia = '' and fatura is null", 
+                                    [$user, $period])->get();
+    $credit = $movements->where('operacao', Movement::CREDIT)->sum('valor');
+    $debit = $movements->where('operacao', Movement::DEBIT)->sum('valor');
+
+    //calculate previous balance
+    $previous_balance = $credit - $debit;
+
+    //find movements actual period
+    $movements = Movement::whereRaw("usuario = ? and 
+                                     SUBSTRING(vencimento, 1, 6) = ? and 
+                                     hashTransferencia = '' and fatura is null", 
+                                    [$user, $period])->get();
+    $credit = $movements->where('operacao', Movement::CREDIT)->sum('valor');
+    $debit = $movements->where('operacao', Movement::DEBIT)->sum('valor');
+
+    //calculate foreseen balance
+    $foreseen_balance = $previous_balance + $credit - $debit;
+
+    //populate object return
+    $return = new stdClass();
+    $return->debitosMes = $debit;
+    $return->creditosMes = $credit;
+    $return->saldoAnterior = $previous_balance;
+    $return->saldoPrevisto = $foreseen_balance;
+
+    return $response->withJson($return);
 
 });
 
