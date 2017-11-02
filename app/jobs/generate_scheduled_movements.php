@@ -39,6 +39,7 @@ foreach ($scheduleds as $scheduled) {
 
 	//SET NEW EMISSION DATE
 	$new_movement->emissao = date('Ymd');
+	$new_movement->status  = Movement::STATUS_TO_PAY;
 
 	Config::logger()->addInfo("Last genereted: " . $lastGenerated .' ' . $new_movement->vencimento );
 

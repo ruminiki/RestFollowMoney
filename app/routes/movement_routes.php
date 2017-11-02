@@ -36,6 +36,38 @@ $app->get('/movements/{id}', function(Request $request, Response $response) use 
                  
     return $movement->toJson();
 });
+
+//FILL
+$app->get('/movements/user/{user}/period/{period}/fill/{fill}', function (Request $request, Response $response) use ($app){
+
+    global $logger;
+    $logger->addInfo('Movement fill: ' . $request->getAttribute('fill') );   
+
+    $param = $request->getAttribute('fill');
+
+    $projection = "usuario = ? and 
+                   SUBSTRING(vencimento, 1, 6) = ? and 
+                   hashTransferencia = '' and 
+                   fatura is null and (descricao like '%".$param."%')";
+
+    /*$fill       = "(descricao like '%".$param."%') or 
+                   finalidade.descricao like '%".$param."%' or 
+                   contaBancaria.descricao like '%".$param."%' or 
+                   cartaoCredito.descricao like '%".$param."%')";*/
+
+    $movements = Movement::with('bankAccount')
+                         ->with('creditCard')
+                         ->with('finality')
+                         ->with('invoice')->whereRaw($projection, [$request->getAttribute('user'), $request->getAttribute('period')])
+                         ->orderBy('vencimento', 'desc')
+                         ->orderBy('emissao', 'desc')
+                         ->orderBy('descricao')
+                         ->get();
+
+    //$movements = $movements->where($fill);                     
+
+    return $movements->toJson();
+});
  
 $app->post('/movements', function(Request $request, Response $response) use ($app){
 
