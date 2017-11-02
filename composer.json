@@ -14,7 +14,9 @@
 			"App\\Exceptions\\": "app/exceptions/",
 			"App\\Handlers\\": "app/handlers/",
 			"App\\Auth\\": "app/auth/",
-			"App\\Util\\": "app/util/"
+			"App\\Util\\": "app/util/",
+			"App\\Jobs\\": "app/jobs/",
+			"App\\Config\\": "app/config/"
 		}
 	}
 }

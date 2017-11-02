@@ -60,8 +60,10 @@ class ComposerStaticInit2edb203ef291928d6ecda70bf4309990
         'A' => 
         array (
             'App\\Util\\' => 9,
+            'App\\Jobs\\' => 9,
             'App\\Handlers\\' => 13,
             'App\\Exceptions\\' => 15,
+            'App\\Config\\' => 11,
             'App\\Auth\\' => 9,
         ),
     );
@@ -151,6 +153,10 @@ class ComposerStaticInit2edb203ef291928d6ecda70bf4309990
         array (
             0 => __DIR__ . '/../..' . '/app/util',
         ),
+        'App\\Jobs\\' => 
+        array (
+            0 => __DIR__ . '/../..' . '/app/jobs',
+        ),
         'App\\Handlers\\' => 
         array (
             0 => __DIR__ . '/../..' . '/app/handlers',
@@ -158,6 +164,10 @@ class ComposerStaticInit2edb203ef291928d6ecda70bf4309990
         'App\\Exceptions\\' => 
         array (
             0 => __DIR__ . '/../..' . '/app/exceptions',
+        ),
+        'App\\Config\\' => 
+        array (
+            0 => __DIR__ . '/../..' . '/app/config',
         ),
         'App\\Auth\\' => 
         array (

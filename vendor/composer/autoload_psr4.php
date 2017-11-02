@@ -27,7 +27,9 @@ return array(
     'Doctrine\\Common\\Inflector\\' => array($vendorDir . '/doctrine/inflector/lib/Doctrine/Common/Inflector'),
     'Carbon\\' => array($vendorDir . '/nesbot/carbon/src/Carbon'),
     'App\\Util\\' => array($baseDir . '/app/util'),
+    'App\\Jobs\\' => array($baseDir . '/app/jobs'),
     'App\\Handlers\\' => array($baseDir . '/app/handlers'),
     'App\\Exceptions\\' => array($baseDir . '/app/exceptions'),
+    'App\\Config\\' => array($baseDir . '/app/config'),
     'App\\Auth\\' => array($baseDir . '/app/auth'),
 );
