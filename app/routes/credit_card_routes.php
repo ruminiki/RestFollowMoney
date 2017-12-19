@@ -11,7 +11,7 @@ use \Illuminate\Database\Capsule\Manager as DB;
 $app->get('/creditCards/user/{user}', function (Request $request, Response $response) use ($app){
     $creditCards = CreditCard::where('usuario', $request->getAttribute('user'))->orderBy('descricao')->get();
 
-    $reference = DateUtil::mesReferenciaFromDateString(date('Ymd'));
+    $reference = DateUtil::mesReferenciaFromDateString(date('Y-m-d', strtotime(date('Ymd') . "+1 months")));
 
     foreach ($creditCards as $creditCard) {
         

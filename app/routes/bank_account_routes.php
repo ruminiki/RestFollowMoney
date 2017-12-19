@@ -13,7 +13,7 @@ $app->get('/bankAccounts/user/{user}', function (Request $request, Response $res
                          			 ->orderBy('situacao', 'asc')
     								 ->orderBy('descricao', 'asc')
                          			 ->get();
-                         			 
+
 	foreach ($bankAccounts as $account) {
 		$contaBancaria = $account->id;
 		$sql = "select 
@@ -21,13 +21,19 @@ $app->get('/bankAccounts/user/{user}', function (Request $request, Response $res
 	                sum(valor) 
 	            from movimento m 
 	            inner join contaBancaria c on c.id = m.contaBancaria 
-	            where m.contaBancaria = $contaBancaria and SUBSTRING(m.vencimento, 1, 6) <= $periodo and m.operacao = 'CREDITO') as credit,
+	            where m.contaBancaria = $contaBancaria and 
+	            SUBSTRING(m.vencimento, 1, 6) <= $periodo and 
+	            m.operacao = 'CREDITO' and 
+	            m.status = 'PAGO') as credit,
 	            
 	            (select 
 	                sum(valor) as debit
 	            from movimento m 
 	            inner join contaBancaria c on c.id = m.contaBancaria 
-	            where m.contaBancaria = $contaBancaria and SUBSTRING(m.vencimento, 1, 6) <= $periodo and m.operacao = 'DEBITO') as debit";
+	            where m.contaBancaria = $contaBancaria and 
+	            SUBSTRING(m.vencimento, 1, 6) <= $periodo and 
+	            m.operacao = 'DEBITO' and
+	            m.status = 'PAGO') as debit";
 
 	    $resume = collect(DB::select($sql))->first();
 	    $account->balance = $resume->credit - $resume->debit;
