@@ -3,9 +3,36 @@
 use \Models\BankAccount as BankAccount;
 use \Psr\Http\Message\ServerRequestInterface as Request;
 use \Psr\Http\Message\ResponseInterface as Response;
+use \Illuminate\Database\Capsule\Manager as DB;
 
 $app->get('/bankAccounts/user/{user}', function (Request $request, Response $response) use ($app){
-    $bankAccounts = BankAccount::where('usuario', $request->getAttribute('user'))->get();
+    $user   = $request->getAttribute('user');
+    $periodo = date('Ym');
+
+    $bankAccounts = BankAccount::where('usuario', $user)
+                         			 ->orderBy('situacao', 'asc')
+    								 ->orderBy('descricao', 'asc')
+                         			 ->get();
+                         			 
+	foreach ($bankAccounts as $account) {
+		$contaBancaria = $account->id;
+		$sql = "select 
+				(select 
+	                sum(valor) 
+	            from movimento m 
+	            inner join contaBancaria c on c.id = m.contaBancaria 
+	            where m.contaBancaria = $contaBancaria and SUBSTRING(m.vencimento, 1, 6) <= $periodo and m.operacao = 'CREDITO') as credit,
+	            
+	            (select 
+	                sum(valor) as debit
+	            from movimento m 
+	            inner join contaBancaria c on c.id = m.contaBancaria 
+	            where m.contaBancaria = $contaBancaria and SUBSTRING(m.vencimento, 1, 6) <= $periodo and m.operacao = 'DEBITO') as debit";
+
+	    $resume = collect(DB::select($sql))->first();
+	    $account->balance = $resume->credit - $resume->debit;
+	}
+
     return $bankAccounts->toJson();
 });
 

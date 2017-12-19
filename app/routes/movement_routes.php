@@ -125,6 +125,7 @@ $app->put('/movements/{id}', function(Request $request, Response $response) use 
     $movement->cartaoCredito = isset($data->credit_card) ? $data->credit_card->id : null;
     $movement->valor         = $data->valor;
     $movement->descricao     = $data->descricao;
+    $movement->operacao      = $data->operacao;
     $movement->status        = $data->status;
 
     $logger->addInfo('Movement Cartao Credito: ' . $movement->cartaoCredito );

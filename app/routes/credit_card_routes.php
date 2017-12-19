@@ -1,11 +1,35 @@
 <?php
 
 use \Models\CreditCard as CreditCard;
+use \Models\CreditCardInvoice as CreditCardInvoice;
+use \Models\Movement as Movement;
+use \App\Util\DateUtil as DateUtil;
 use \Psr\Http\Message\ServerRequestInterface as Request;
 use \Psr\Http\Message\ResponseInterface as Response;
+use \Illuminate\Database\Capsule\Manager as DB;
 
 $app->get('/creditCards/user/{user}', function (Request $request, Response $response) use ($app){
     $creditCards = CreditCard::where('usuario', $request->getAttribute('user'))->orderBy('descricao')->get();
+
+    $reference = DateUtil::mesReferenciaFromDateString(date('Ymd'));
+
+    foreach ($creditCards as $creditCard) {
+        
+        $invoice = CreditCardInvoice::whereRaw('cartaoCredito = ? and mesReferencia = ?', [$creditCard->id, $reference])->first();
+
+        $movements = DB::table('movimento')
+            ->join('movimentosFatura', 'movimentosFatura.movimento', '=', 'movimento.id')
+            ->where('movimentosFatura.fatura', $invoice->id)
+            ->select('movimento.operacao', 'movimento.valor')
+            ->get();
+
+        $credit = $movements->where('operacao', Movement::CREDIT)->sum('valor');
+        $debit = $movements->where('operacao', Movement::DEBIT)->sum('valor');
+        
+        $creditCard->currentInvoice = $debit - $credit;
+
+    }
+
     return $creditCards->toJson();
 });
 
