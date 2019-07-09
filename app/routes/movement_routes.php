@@ -48,21 +48,19 @@ $app->get('/movements/user/{user}/period/{period}/fill/{fill}', function (Reques
     $projection = "usuario = ? and 
                    SUBSTRING(vencimento, 1, 6) = ? and 
                    hashTransferencia = '' and 
-                   fatura is null and (descricao like '%".$param."%')";
+                   fatura is null and 
+                   (descricao like '%".$param."%' or 
+                   finalidade in (select id from finalidade where descricao like '%".$param."%'))";
 
-    /*$fill       = "(descricao like '%".$param."%') or 
-                   finalidade.descricao like '%".$param."%' or 
-                   contaBancaria.descricao like '%".$param."%' or 
-                   cartaoCredito.descricao like '%".$param."%')";*/
-
-    $movements = Movement::with('bankAccount')
+   $movements = Movement::with('bankAccount')
                          ->with('creditCard')
                          ->with('finality')
                          ->with('invoice')->whereRaw($projection, [$request->getAttribute('user'), $request->getAttribute('period')])
                          ->orderBy('vencimento', 'desc')
                          ->orderBy('emissao', 'desc')
                          ->orderBy('descricao')
-                         ->get();
+                         ->get(); 
+
 
     //$movements = $movements->where($fill);                     
 
