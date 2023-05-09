@@ -162,6 +162,65 @@ class Movement extends \Illuminate\Database\Eloquent\Model {
         $this->usuario           = $accountTransfer->usuario;
     }
 
+    public static function prepareParcelas($movimento){
+
+        global $logger;
+        $movimentos = array();
+
+        $parcela = 0;
+        $hashParcelas = md5(date('Ymd H:i:s:u'));
+        $descricao = $movimento->descricao;
+        $vencimento = "";
+
+        for ($i = 1; $i <= $movimento->parcelas; $i++) {
+
+            $m                = new Movement();
+            $m->emissao       = $movimento->emissao;
+            $m->vencimento    = $movimento->vencimento;
+            $m->finalidade    = isset($movimento->finality) ? $movimento->finality->id : null;
+            $m->contaBancaria = isset($movimento->bank_account) ? $movimento->bank_account->id : null;
+            $m->cartaoCredito = isset($movimento->credit_card) ? $movimento->credit_card->id : null;
+            $m->valor         = $movimento->valor;
+            $m->status        = $movimento->status;
+            $m->operacao      = $movimento->operacao;
+            $m->parcelas      = $movimento->parcelas;
+            $m->usuario       = $movimento->usuario;
+            #hashpacelas une todos os movimentos
+            $m->hashParcelas  = $hashParcelas;
+            $m->parcela       = '(' . $i . ' de ' . $movimento->parcelas . ')';
+            $m->descricao     = $descricao . ' ' . $m->parcela;
+
+            #primeiro movimento é para a data escolhida, 
+            #a partir do segundo incrementa o vencimento
+            if ( $vencimento != "" && substr($vencimento,-4,2) == '12' ){
+                $ano = intval(substr($vencimento,0,4)) + 1;
+                $mes = "01";
+                $dia = substr($vencimento, -2);
+                $vencimento = $ano.$mes.$dia;         
+            }else{ 
+                if ($vencimento == ""){
+                  $vencimento = $movimento->vencimento;  
+                } else{
+                $ano = substr($vencimento,0,4);
+                $mes = intval(substr($vencimento,-4,2)) + 1;
+                if($mes < 10) $mes = "0".$mes;
+                $dia = substr($vencimento, -2);
+                $vencimento = $ano.$mes.$dia; 
+              }
+            }
+
+            $logger->addInfo("Adjusting due date. Portion " . $m->parcela . " due date " . $vencimento); 
+
+            $m->vencimento = $vencimento;
+
+            array_push($movimentos, $m);
+
+        }
+
+        return $movimentos;
+        
+    }
+
 }
 
 ?>
