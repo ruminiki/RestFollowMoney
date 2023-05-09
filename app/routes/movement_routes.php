@@ -8,7 +8,7 @@ use \Psr\Http\Message\ServerRequestInterface as Request;
 use \Psr\Http\Message\ResponseInterface as Response;
 
 $app->get('/movements/user/{user}/period/{period}', function (Request $request, Response $response) use ($app){
-    $movements = Movement::whereRaw("usuario = ? and SUBSTRING(vencimento, 1, 6) = ? and hashTransferencia = '' and fatura is null", 
+    $movements = Movement::whereRaw("usuario = ? and SUBSTRING(vencimento, 1, 6) = ? and hashTransferencia is null and fatura is null", 
                                     [$request->getAttribute('user'), $request->getAttribute('period')])
                          ->with('bankAccount')
                          ->with('creditCard')
@@ -47,7 +47,7 @@ $app->get('/movements/user/{user}/period/{period}/fill/{fill}', function (Reques
 
     $projection = "usuario = ? and 
                    SUBSTRING(vencimento, 1, 6) = ? and 
-                   hashTransferencia = '' and 
+                   hashTransferencia is null and 
                    fatura is null and 
                    (descricao like '%".$param."%' or 
                    finalidade in (select id from finalidade where descricao like '%".$param."%'))";
@@ -70,6 +70,7 @@ $app->get('/movements/user/{user}/period/{period}/fill/{fill}', function (Reques
 $app->post('/movements', function(Request $request, Response $response) use ($app){
 
     global $logger;
+    $movimentos = array();
 
     $data = json_decode($request->getBody(), false);
 
@@ -83,30 +84,41 @@ $app->post('/movements', function(Request $request, Response $response) use ($ap
     $movement->descricao     = $data->descricao;
     $movement->status        = $data->status;
     $movement->operacao      = $data->operacao;
+    $movement->parcelas      = $data->parcelas;
     $movement->usuario       = $data->usuario;
 
+    #SE FOR UM MOVIMENTO PARCELADO
+    if ( $movement->parcelas > 1 ){
+        $logger->addInfo("Installment movement " . $movement->descricao);
+        $movimentos = Movement::prepareParcelas($movement);
+    }else{
+        array_push($movimentos, $movement);
+    }    
 
-    try {
+    Movement::getConnectionResolver()->connection()->beginTransaction();
+    
+    foreach ($movimentos as $m => $mov) {
+        try {
+    
+            $mov->save();
 
-        Movement::getConnectionResolver()->connection()->beginTransaction();
-        
-        $movement->save();
+            if ( $mov->creditCard != null && $mov->creditCard->id > 0 ){
+                $mov->addToInvoice();
+            }
 
-        if ( $movement->creditCard != null && $movement->creditCard->id > 0 ){
-            $movement->addToInvoice();
+            $logger->addInfo('Movement saved: saving movement ' . $mov->descricao );
+            
+            $mov->save();              
+    
         }
-
-        $logger->addInfo('Movement Save: saving movement.' );
-        $movement->save();
-
-        Movement::getConnectionResolver()->connection()->commit();
-
-        return $movement->toJson();
-
+        catch(Exception $e) {
+            Movement::getConnectionResolver()->connection()->rollback();
+            throw new Exception("Error Processing Request: " . $e->getMessage(), 1);
+        }
     }
-    catch(Exception $e) {
-        throw new Exception("Error Processing Request: " . $e->getMessage(), 1);
-    }
+
+    Movement::getConnectionResolver()->connection()->commit();
+    return $movement->toJson();
 
 });
  
@@ -124,6 +136,7 @@ $app->put('/movements/{id}', function(Request $request, Response $response) use 
     $movement->valor         = $data->valor;
     $movement->descricao     = $data->descricao;
     $movement->operacao      = $data->operacao;
+    $movement->parcelas      = $data->parcelas;
     $movement->status        = $data->status;
 
     $logger->addInfo('Movement Cartao Credito: ' . $movement->cartaoCredito );
@@ -216,7 +229,7 @@ $app->get('/movements/previousBalance/user/{user}/period/{period}', function(Req
     $user = $request->getAttribute('user');
     $period = $request->getAttribute('period');
 
-    $movements = Movement::whereRaw("usuario = ? and SUBSTRING(vencimento, 1, 6) < ? and hashTransferencia = '' and fatura is null", [$user, $period])->get();
+    $movements = Movement::whereRaw("usuario = ? and SUBSTRING(vencimento, 1, 6) < ? and hashTransferencia is null and fatura is null", [$user, $period])->get();
     $credit = $movements->where('operacao', Movement::CREDIT)->sum('valor');
     $debit = $movements->where('operacao', Movement::DEBIT)->sum('valor');
 
@@ -247,7 +260,7 @@ $app->get('/movements/balance/user/{user}/period/{period}', function(Request $re
     //all movements before actual period
     $movements = Movement::whereRaw("usuario = ? and 
                                      SUBSTRING(vencimento, 1, 6) < ? and 
-                                     hashTransferencia = '' and fatura is null", 
+                                     hashTransferencia is null and fatura is null", 
                                     [$user, $period])->get();
     $credit = $movements->where('operacao', Movement::CREDIT)->sum('valor');
     $debit = $movements->where('operacao', Movement::DEBIT)->sum('valor');
@@ -258,7 +271,7 @@ $app->get('/movements/balance/user/{user}/period/{period}', function(Request $re
     //find movements actual period
     $movements = Movement::whereRaw("usuario = ? and 
                                      SUBSTRING(vencimento, 1, 6) = ? and 
-                                     hashTransferencia = '' and fatura is null", 
+                                     hashTransferencia is null and fatura is null", 
                                     [$user, $period])->get();
     $credit = $movements->where('operacao', Movement::CREDIT)->sum('valor');
     $debit = $movements->where('operacao', Movement::DEBIT)->sum('valor');
@@ -332,14 +345,14 @@ $app->get('/movements/finalitiesChart/user/{user}/period/{period}', function(Req
                     sum(valor) 
                 from movimento 
                 where usuario = $usuario and SUBSTRING(vencimento, 1, 6) = $periodo and operacao = '$operacao'
-                and hashTransferencia = '' and fatura is null)
+                and hashTransferencia is null and fatura is null)
 
                 ) * 100) as percent, 
                 f.descricao as label
             from movimento m 
             inner join finalidade f on f.id = m.finalidade 
             where m.usuario = $usuario and SUBSTRING(m.vencimento, 1, 6) = $periodo and m.operacao = '$operacao' 
-            and hashTransferencia = '' and fatura is null group by f.descricao order by 1 asc";
+            and hashTransferencia is null and fatura is null group by f.descricao order by 1 asc";
 
     $resume = DB::select($sql);
 
